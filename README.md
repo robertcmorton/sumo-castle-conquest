@@ -4,7 +4,7 @@ A browser game designed by an 8-year-old named Leo and built with Claude.
 
 ## Play
 
-Open [`sumo-castle-conquest.html`](sumo-castle-conquest.html) in any modern browser.
+Open [`index.html`](index.html) in any modern browser, or visit the deployed version.
 
 ## How to play
 
