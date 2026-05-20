@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sumo & Ninja!</title>
+<style>
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+body {
+  background: linear-gradient(135deg, #fcd34d 0%, #f97316 50%, #ef4444 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#game {
+  width: 100%;
+  max-width: 900px;
+  height: 100%;
+  background: linear-gradient(180deg, #fff7ed 0%, #fed7aa 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 900px) {
+  body { padding: 20px; }
+  #game {
+    border-radius: 24px;
+    height: calc(100vh - 40px);
+    max-height: 820px;
+  }
+}
+
+/* ============================================================
+   HUD (coin total + level, always visible)
+   ============================================================ */
+.hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.coin-display,
+.level-display {
+  background: white;
+  border: 4px solid #fbbf24;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 1.15em;
+  font-weight: bold;
+  color: #78350f;
+  box-shadow: 0 4px 0 #ca8a04, 0 6px 12px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+}
+
+.level-display {
+  border-color: #60a5fa;
+  color: #1e3a8a;
+  box-shadow: 0 4px 0 #2563eb, 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================================
+   SCREEN SWITCHING
+   ============================================================ */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  gap: 12px;
+}
+.screen.active { display: flex; }
+
+/* ============================================================
+   TEXT
+   ============================================================ */
+h1 {
+  font-size: clamp(2em, 6vw, 3.2em);
+  color: #dc2626;
+  text-align: center;
+  line-height: 1.1;
+  text-shadow:
+    3px 3px 0 #fff,
+    -2px -2px 0 #fff,
+    2px -2px 0 #fff,
+    -2px 2px 0 #fff,
+    6px 6px 0 rgba(0, 0, 0, 0.2);
+  margin: 6px 0;
+}
+
+h2 {
+  font-size: clamp(1.4em, 4vw, 2em);
+  color: #1e3a8a;
+  text-align: center;
+}
+
+p {
+  font-size: 1.05em;
+  text-align: center;
+  line-height: 1.5;
+  color: #374151;
+}
+
+/* ============================================================
+   BUTTONS (menus + shop)
+   ============================================================ */
+.btn {
+  background: #f97316;
+  color: white;
+  border: 4px solid white;
+  border-radius: 999px;
+  padding: 14px 30px;
+  font-size: clamp(1.1em, 3vw, 1.4em);
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 6px 0 #c2410c, 0 8px 16px rgba(0, 0, 0, 0.25);
+  font-family: inherit;
+  transition: transform 0.08s, box-shadow 0.08s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  min-width: 160px;
+}
+
+.btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #c2410c, 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn.green       { background: #16a34a; box-shadow: 0 6px 0 #14532d, 0 8px 16px rgba(0, 0, 0, 0.25); }
+.btn.green:active{                       box-shadow: 0 2px 0 #14532d, 0 4px 8px rgba(0, 0, 0, 0.2); }
+
+.btn.blue        { background: #2563eb; box-shadow: 0 6px 0 #1e3a8a, 0 8px 16px rgba(0, 0, 0, 0.25); }
+.btn.blue:active {                       box-shadow: 0 2px 0 #1e3a8a, 0 4px 8px rgba(0, 0, 0, 0.2); }
+
+.btn.red         { background: #dc2626; box-shadow: 0 6px 0 #7f1d1d, 0 8px 16px rgba(0, 0, 0, 0.25); }
+.btn.red:active  {                       box-shadow: 0 2px 0 #7f1d1d, 0 4px 8px rgba(0, 0, 0, 0.2); }
+
+.btn.yellow      { background: #f59e0b; box-shadow: 0 6px 0 #92400e, 0 8px 16px rgba(0, 0, 0, 0.25); color: #fff; }
+.btn.yellow:active{                      box-shadow: 0 2px 0 #92400e, 0 4px 8px rgba(0, 0, 0, 0.2); }
+
+.btn.small {
+  padding: 10px 20px;
+  font-size: 0.95em;
+  min-width: 100px;
+}
+
+.btn:disabled {
+  background: #9ca3af;
+  box-shadow: 0 6px 0 #4b5563, 0 8px 16px rgba(0, 0, 0, 0.15);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* ============================================================
+   START SCREEN
+   ============================================================ */
+.title-emojis {
+  font-size: 3em;
+  animation: bob 2s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-12px) rotate(3deg); }
+}
+
+/* ============================================================
+   MATCH SCREEN
+   ============================================================ */
+.match-info {
+  margin-top: 56px;
+  background: white;
+  border: 3px solid #1e3a8a;
+  border-radius: 20px;
+  padding: 6px 22px;
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #1e3a8a;
+}
+
+.ring-area {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+}
+
+/* Top-down circular ring */
+.ring {
+  width: min(82vmin, 380px);
+  max-width: 90%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fef3c7 0%, #fde68a 35%, #f59e0b 100%);
+  border: 8px solid #92400e;
+  position: relative;
+  box-shadow:
+    inset 0 0 40px rgba(146, 64, 14, 0.3),
+    0 10px 30px rgba(0, 0, 0, 0.25);
+  overflow: visible;
+}
+
+/* Inner dashed circle for a dohyo / dojo feel */
+.ring::before {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  border: 3px dashed #92400e;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Centre dot */
+.ring::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  background: #92400e;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.4;
+}
+
+/* Fighters are absolutely positioned inside the ring */
+.fighter {
+  position: absolute;
+  width: clamp(58px, 14vmin, 78px);
+  height: clamp(58px, 14vmin, 78px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: left 0.05s linear, top 0.05s linear;
+  z-index: 5;
+}
+
+.fighter-shadow {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  z-index: 1;
+  filter: blur(2px);
+}
+
+.fighter-body {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--f-color, #fbcfe8);
+  border: 5px solid #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(1.6em, 3.5vw, 2.4em);
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Ninja headband (only shown when the body has .ninja class) */
+.fighter-body.ninja::after {
+  content: '';
+  position: absolute;
+  top: 22%;
+  left: -8px;
+  right: -8px;
+  height: 11px;
+  background: var(--belt-color, #dc2626);
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+  z-index: 3;
+}
+
+/* Quick white flash when a fighter takes a hit */
+.fighter.flash .fighter-body {
+  background: white !important;
+  filter: brightness(1.4);
+}
+
+/* Hit burst (punch / kick visual) */
+.hit-fx {
+  position: absolute;
+  font-size: clamp(2em, 5vw, 2.8em);
+  pointer-events: none;
+  z-index: 8;
+  transform: translate(-50%, -50%);
+  animation: hitPop 0.55s ease-out forwards;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+@keyframes hitPop {
+  0%   { transform: translate(-50%, -50%) scale(0.4)   rotate(-15deg); opacity: 1; }
+  50%  { transform: translate(-50%, -50%) scale(1.5)   rotate(10deg);  opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2)     rotate(20deg);  opacity: 0; }
+}
+
+/* Quit button (corner of match screen) */
+.quit-btn {
+  position: absolute;
+  top: 62px;
+  right: 12px;
+  background: white;
+  border: 3px solid #dc2626;
+  color: #dc2626;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 3px 0 #7f1d1d;
+  z-index: 60;
+}
+
+/* Three big action buttons at the bottom */
+.action-buttons {
+  display: flex;
+  gap: clamp(8px, 2vw, 16px);
+  justify-content: center;
+  align-items: center;
+  margin: 8px 0 16px;
+  width: 100%;
+  flex-wrap: nowrap;
+}
+
+.action-btn {
+  background: #dc2626;
+  color: white;
+  border: 5px solid white;
+  border-radius: 50%;
+  width: clamp(90px, 22vw, 130px);
+  height: clamp(90px, 22vw, 130px);
+  font-size: clamp(0.85em, 2.4vw, 1.1em);
+  font-weight: bold;
+  cursor: pointer;
+  font-family: inherit;
+  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: transform 0.05s, box-shadow 0.05s, opacity 0.2s;
+  letter-spacing: 0.5px;
+  padding: 0;
+}
+
+.action-btn .action-emoji {
+  font-size: clamp(1.6em, 4vw, 2.2em);
+  line-height: 1;
+}
+
+.action-btn.punch-btn { background: #ef4444; box-shadow: 0 8px 0 #7f1d1d, 0 12px 20px rgba(0, 0, 0, 0.3); }
+.action-btn.kick-btn  { background: #2563eb; box-shadow: 0 8px 0 #1e3a8a, 0 12px 20px rgba(0, 0, 0, 0.3); }
+.action-btn.move-btn  { background: #16a34a; box-shadow: 0 8px 0 #14532d, 0 12px 20px rgba(0, 0, 0, 0.3); }
+
+.action-btn.punch-btn:active { transform: translateY(5px); box-shadow: 0 3px 0 #7f1d1d, 0 5px 10px rgba(0, 0, 0, 0.25); }
+.action-btn.kick-btn:active  { transform: translateY(5px); box-shadow: 0 3px 0 #1e3a8a, 0 5px 10px rgba(0, 0, 0, 0.25); }
+.action-btn.move-btn:active  { transform: translateY(5px); box-shadow: 0 3px 0 #14532d, 0 5px 10px rgba(0, 0, 0, 0.25); }
+
+.action-btn.cooldown {
+  opacity: 0.45;
+  filter: grayscale(0.7);
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   SHOP SCREEN
+   ============================================================ */
+.shop-list {
+  width: 100%;
+  max-width: 600px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px;
+}
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 4px solid #1f2937;
+  border-radius: 16px;
+  padding: 10px 12px;
+  gap: 12px;
+  box-shadow: 0 4px 0 #1f2937;
+}
+
+.shop-item.owned    { background: #dcfce7; border-color: #16a34a; box-shadow: 0 4px 0 #16a34a; }
+.shop-item.equipped { background: #fef3c7; border-color: #f59e0b; box-shadow: 0 4px 0 #f59e0b; }
+
+.shop-preview {
+  width: 70px;
+  height: 70px;
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shop-info { flex: 1; min-width: 0; }
+.shop-name { font-size: 1.15em; font-weight: bold; color: #1e3a8a; }
+.shop-power { color: #6b21a8; font-size: 0.9em; }
+.shop-cost { color: #b45309; font-weight: bold; font-size: 0.95em; }
+
+/* ============================================================
+   OVERLAYS (popups)
+   ============================================================ */
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+.overlay.active { display: flex; }
+
+.overlay-card {
+  background: white;
+  border: 6px solid #fbbf24;
+  border-radius: 24px;
+  padding: 28px 24px;
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  animation: popIn 0.35s;
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0); }
+  60%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.overlay-emoji { font-size: 3.5em; line-height: 1; margin-bottom: 6px; }
+
+.overlay-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  align-items: center;
+}
+
+/* ============================================================
+   CONFETTI (level-26 unlock + final victory)
+   ============================================================ */
+.confetti-piece {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  top: -20px;
+  pointer-events: none;
+  z-index: 300;
+  animation: fall linear forwards;
+}
+
+@keyframes fall {
+  to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+/* ============================================================
+   VICTORY SCREEN
+   ============================================================ */
+#victoryScreen {
+  background: linear-gradient(180deg, #fef3c7 0%, #fbbf24 100%);
+}
+
+</style>
+</head>
+<body>
+<div id="game">
+
+  <!-- HUD: always shows coins + current level -->
+  <div class="hud">
+    <div class="coin-display" id="coinDisplay">&#x1F4B0; 0</div>
+    <div class="level-display" id="levelDisplay">Level 1</div>
+  </div>
+
+  <!-- ====================== START SCREEN ====================== -->
+  <div class="screen active" id="startScreen">
+    <div class="title-emojis" id="titleEmojis">&#x1F93C;</div>
+    <h1 id="gameTitle">SUMO<br>SMASH!</h1>
+    <p>Punch, kick and move to knock<br>your opponent out of the ring!</p>
+    <button class="btn green" id="playBtn">PLAY</button>
+    <button class="btn blue" id="shopBtn">SHOP</button>
+    <button class="btn red small" id="resetBtn">Reset Game</button>
+  </div>
+
+  <!-- ====================== MATCH SCREEN ====================== -->
+  <div class="screen" id="matchScreen">
+    <button class="quit-btn" id="quitBtn" title="Back to menu">&#10005;</button>
+    <div class="match-info">
+      Opponent <span id="oppNum">1</span> of <span id="oppTotal">1</span>
+    </div>
+    <div class="ring-area">
+      <div class="ring" id="ring">
+        <div class="fighter" id="playerF">
+          <div class="fighter-shadow"></div>
+          <div class="fighter-body" id="playerFBody">&#x1F642;</div>
+        </div>
+        <div class="fighter" id="oppF">
+          <div class="fighter-shadow"></div>
+          <div class="fighter-body" id="oppFBody">&#x1F620;</div>
+        </div>
+      </div>
+    </div>
+    <div class="action-buttons">
+      <button class="action-btn punch-btn" id="punchBtn">
+        <div class="action-emoji">&#x1F44A;</div>
+        PUNCH
+      </button>
+      <button class="action-btn kick-btn" id="kickBtn">
+        <div class="action-emoji">&#x1F9B5;</div>
+        KICK
+      </button>
+      <button class="action-btn move-btn" id="moveBtn">
+        <div class="action-emoji">&#x1F463;</div>
+        MOVE
+      </button>
+    </div>
+  </div>
+
+  <!-- ====================== SHOP SCREEN ====================== -->
+  <div class="screen" id="shopScreen">
+    <h2 style="margin-top: 50px;">&#x1F6D2; SHOP</h2>
+    <p id="shopHint">Buy a stronger fighter!</p>
+    <div class="shop-list" id="shopList"></div>
+    <button class="btn blue" id="shopBackBtn">BACK</button>
+  </div>
+
+  <!-- ====================== VICTORY SCREEN ====================== -->
+  <div class="screen" id="victoryScreen">
+    <h1>&#x1F3C6; CHAMPION! &#x1F3C6;</h1>
+    <h2>You beat all 50 levels!</h2>
+    <p>You are the greatest sumo and ninja<br>the world has ever seen!</p>
+    <button class="btn green" id="victoryResetBtn">Play Again</button>
+  </div>
+
+  <!-- ====================== OVERLAY (popups) ====================== -->
+  <div class="overlay" id="overlay">
+    <div class="overlay-card">
+      <div class="overlay-emoji" id="overlayEmoji"></div>
+      <h2 id="overlayTitle"></h2>
+      <p id="overlayText"></p>
+      <div class="overlay-buttons" id="overlayButtons"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   GAME CONFIG
+   ============================================================ */
+const MAX_LEVEL    = 50;
+const SWITCH_LEVEL = 26;    // Level where sumo -> ninja swap happens
+
+// Physics loop runs 20 times a second
+const TICK_MS  = 50;
+const FRICTION = 0.82;      // Per-tick velocity decay
+
+/* Coordinates are normalized so the ring is a unit circle:
+   x and y range from -1 to +1, ring centre is (0, 0), radius 1. */
+const ATTACK_RANGE     = 0.42;   // Max distance for punch / kick to land
+const OUT_THRESHOLD    = 0.93;   // Distance from centre = "knocked out"
+const PLAYER_START     = { x: -0.55, y: 0 };
+const OPPONENT_START_X = 0.55;
+
+/* Player action tuning. Forces are velocity boosts (impulses). */
+const MOVE_FORCE          = 0.020;  // Per MOVE tap, toward opponent
+const PUNCH_FORCE_BASE    = 0.028;  // Multiplied by character.power
+const KICK_FORCE_BASE     = 0.085;  // Multiplied by character.power
+const PUNCH_COOLDOWN_TICKS = 4;     // 200ms - prevents accidental double taps
+const KICK_COOLDOWN_TICKS  = 24;    // 1.2s
+const WHIFF_LUNGE         = 0.010;  // Tiny self-push if attack misses
+
+/* Opponent (AI) difficulty scales with the level *inside the current era*.
+   The era resets at the ninja switch so level 26 isn't as hard as level 25. */
+function eraLevel(level) {
+  return level < SWITCH_LEVEL ? level : (level - SWITCH_LEVEL + 1);
+}
+function opponentSpeed(level) {
+  return 0.0014 + eraLevel(level) * 0.00012;
+}
+function opponentAttackForce(level) {
+  return 0.013 + eraLevel(level) * 0.00085;
+}
+function opponentAttackInterval(level) {
+  // Ticks between attacks. Faster (smaller) at higher levels.
+  return Math.max(15, Math.round(30 - eraLevel(level) * 0.6));
+}
+
+/* Sumo wrestlers - used for levels 1 to 25.
+   Higher power = harder punches and kicks. */
+const SUMO_CHARS = [
+  { id: 'tim',   name: 'Tiny Tim',   cost: 0,   power: 1.0, color: '#fbcfe8', belt: '#9f1239', face: '\u{1F642}' },
+  { id: 'bubba', name: 'Big Bubba',  cost: 30,  power: 1.3, color: '#bae6fd', belt: '#1e40af', face: '\u{1F60E}' },
+  { id: 'boss',  name: 'The Boss',   cost: 120, power: 1.6, color: '#ddd6fe', belt: '#6b21a8', face: '\u{1F928}' },
+  { id: 'champ', name: 'Sumo Champ', cost: 400, power: 2.0, color: '#fde68a', belt: '#92400e', face: '\u{1F929}' },
+];
+
+/* Ninjas - used for levels 26 to 50. The "belt" colour shows as a
+   headband across their head in the top-down view. */
+const NINJA_CHARS = [
+  { id: 'rookie', name: 'Lil Ninja',    cost: 0,   power: 1.0, color: '#9ca3af', belt: '#f9fafb', face: '\u{1F642}', ninja: true },
+  { id: 'shade',  name: 'Shade Ninja',  cost: 60,  power: 1.3, color: '#6b7280', belt: '#facc15', face: '\u{1F60E}', ninja: true },
+  { id: 'red',    name: 'Red Lotus',    cost: 240, power: 1.6, color: '#4b5563', belt: '#dc2626', face: '\u{1F928}', ninja: true },
+  { id: 'master', name: 'Ninja Master', cost: 800, power: 2.0, color: '#1f2937', belt: '#000000', face: '\u{1F929}', ninja: true },
+];
+
+/* Pool of cartoony opponent faces - scaled by level. */
+const OPPONENT_POOL = [
+  { color: '#a3e635', face: '\u{1F620}' },
+  { color: '#fb923c', face: '\u{1F621}' },
+  { color: '#f87171', face: '\u{1F624}' },
+  { color: '#c084fc', face: '\u{1F608}' },
+  { color: '#22d3ee', face: '\u{1F624}' },
+  { color: '#84cc16', face: '\u{1F976}' },
+  { color: '#fde047', face: '\u{1F92A}' },
+  { color: '#94a3b8', face: '\u{1F612}' },
+];
+
+/* ============================================================
+   STATE & SAVE / LOAD
+   ============================================================ */
+const SAVE_KEY = 'sumoNinjaSave_v1';
+
+let state = makeFreshState();
+
+function makeFreshState() {
+  return {
+    level: 1,
+    coins: 0,
+    ownedSumo:    ['tim'],
+    ownedNinja:   ['rookie'],
+    equippedSumo: 'tim',
+    equippedNinja:'rookie',
+    ninjaUnlocked: false,
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    Object.assign(state, saved);
+    // Starter characters are always owned, even if an old save is missing them
+    if (!state.ownedSumo.includes('tim'))     state.ownedSumo.push('tim');
+    if (!state.ownedNinja.includes('rookie')) state.ownedNinja.push('rookie');
+  } catch (e) { console.warn('Could not load save:', e); }
+}
+
+function saveState() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+  catch (e) { console.warn('Could not save:', e); }
+}
+
+function resetState() {
+  state = makeFreshState();
+  saveState();
+  updateHud();
+  updateTitle();
+  showScreen('startScreen');
+}
+
+/* ============================================================
+   SMALL HELPERS
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+
+const isNinjaLevel     = (lvl) => lvl >= SWITCH_LEVEL;
+const getCurrentRoster = ()    => isNinjaLevel(state.level) ? NINJA_CHARS : SUMO_CHARS;
+const getOwnedIds      = ()    => isNinjaLevel(state.level) ? state.ownedNinja : state.ownedSumo;
+const getEquippedId    = ()    => isNinjaLevel(state.level) ? state.equippedNinja : state.equippedSumo;
+const getEquippedChar  = ()    => getCurrentRoster().find(c => c.id === getEquippedId());
+
+function updateHud() {
+  $('coinDisplay').textContent = '\u{1F4B0} ' + state.coins;
+  $('levelDisplay').textContent = 'Level ' + state.level;
+}
+
+function updateTitle() {
+  // Cosmetic: title + bouncing emoji on the start screen reflect the current era
+  if (isNinjaLevel(state.level)) {
+    $('gameTitle').innerHTML = 'NINJA<br>KICK!';
+    $('titleEmojis').textContent = '\u{1F977}';
+  } else {
+    $('gameTitle').innerHTML = 'SUMO<br>SMASH!';
+    $('titleEmojis').textContent = '\u{1F93C}';
+  }
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+/* Generic popup. buttons: [{ label, style, onClick }] */
+function showOverlay({ emoji, title, text, buttons }) {
+  $('overlayEmoji').textContent = emoji || '';
+  $('overlayTitle').textContent = title || '';
+  $('overlayText').innerHTML = (text || '').replace(/\n/g, '<br>');
+
+  const container = $('overlayButtons');
+  container.innerHTML = '';
+  (buttons || []).forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'btn ' + (b.style || 'green');
+    btn.textContent = b.label;
+    btn.addEventListener('click', () => {
+      $('overlay').classList.remove('active');
+      if (b.onClick) b.onClick();
+    });
+    container.appendChild(btn);
+  });
+
+  $('overlay').classList.add('active');
+}
+
+function confirmReset() {
+  if (confirm('Are you sure you want to reset all progress? You will lose your level, coins and fighters.')) {
+    resetState();
+  }
+}
+
+/* Confetti for celebrations - bunch of falling coloured squares. */
+function spawnConfetti(count) {
+  const colours = ['#ef4444', '#f59e0b', '#eab308', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+  const game = $('game');
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = (Math.random() * 100) + '%';
+    p.style.background = colours[Math.floor(Math.random() * colours.length)];
+    p.style.animationDuration = (2 + Math.random() * 2) + 's';
+    p.style.animationDelay = (Math.random() * 0.4) + 's';
+    p.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+    p.style.borderRadius = Math.random() < 0.5 ? '0' : '50%';
+    game.appendChild(p);
+    setTimeout(() => p.remove(), 4500);
+  }
+}
+
+/* ============================================================
+   FIGHTER VISUALS
+   ============================================================ */
+
+/* Top-down fighter (used in the match ring): coloured head circle
+   with an emoji face. Ninjas get a coloured headband stripe. */
+function renderFighterTop(bodyEl, charLike) {
+  bodyEl.textContent = charLike.face;
+  bodyEl.style.setProperty('--f-color', charLike.color);
+  bodyEl.style.setProperty('--belt-color', charLike.belt);
+  if (charLike.ninja) bodyEl.classList.add('ninja');
+  else                bodyEl.classList.remove('ninja');
+}
+
+/* Mini preview used in shop rows - same look, contained in a small box. */
+function renderShopPreview(el, char) {
+  el.innerHTML = `
+    <div class="fighter-body ${char.ninja ? 'ninja' : ''}"
+         style="--f-color: ${char.color}; --belt-color: ${char.belt};
+                width: 60px; height: 60px; font-size: 1.8em;">
+      ${char.face}
+    </div>
+  `;
+}
+
+/* ============================================================
+   MATCH LOGIC
+   ============================================================ */
+
+const match = {
+  active: false,
+  intervalId: null,
+  opponentsTotal: 1,
+  opponentIdx: 0,
+};
+
+/* Both fighters use the same shape: position + velocity + cooldowns. */
+const player = {
+  x: 0, y: 0, vx: 0, vy: 0,
+  kickCD: 0, punchCD: 0,
+  flash: 0,
+};
+
+const opponent = {
+  x: 0, y: 0, vx: 0, vy: 0,
+  attackCD: 0,
+  flash: 0,
+  // appearance:
+  color: '#a3e635', belt: '#1f2937', face: '\u{1F620}', ninja: false,
+};
+
+/* Number of opponents in a level scales gently within each era.
+   Sumo: 1 (lvl 1-5), 2 (6-10), 3 (11-15), 4 (16-20), 5 (21-25).
+   Ninja: same shape, resets at level 26. */
+function computeOpponentsForLevel(level) {
+  return Math.min(1 + Math.floor((eraLevel(level) - 1) / 5), 5);
+}
+
+/* Coin reward per opponent beaten, grows with level. */
+function rewardForLevel(level) {
+  return 5 + Math.floor(level / 5) * 2;
+}
+
+function goToMatch() {
+  showScreen('matchScreen');
+  startLevel();
+}
+
+function startLevel() {
+  // First time the player hits level 26, celebrate the ninja transformation
+  if (state.level === SWITCH_LEVEL && !state.ninjaUnlocked) {
+    state.ninjaUnlocked = true;
+    saveState();
+    updateTitle();
+    spawnConfetti(60);
+    showOverlay({
+      emoji: '\u{1F977}✨',
+      title: 'NINJA TIME!',
+      text: "You've mastered sumo wrestling!\nNow you're a NINJA!\n\nCheck out the new fighters in the shop.",
+      buttons: [
+        { label: "Let's Go!", style: 'green', onClick: beginLevel },
+        { label: 'Open Shop', style: 'blue',  onClick: showShop },
+      ],
+    });
+    return;
+  }
+  beginLevel();
+}
+
+function beginLevel() {
+  match.opponentsTotal = computeOpponentsForLevel(state.level);
+  match.opponentIdx = 0;
+  showScreen('matchScreen');
+  setupOpponent();
+}
+
+function setupOpponent() {
+  // Reset player position + velocity + cooldowns
+  player.x = PLAYER_START.x; player.y = PLAYER_START.y;
+  player.vx = 0; player.vy = 0;
+  player.kickCD = 0; player.punchCD = 0; player.flash = 0;
+
+  // Opponent starts on the right side, with a small random vertical offset
+  opponent.x = OPPONENT_START_X;
+  opponent.y = (Math.random() - 0.5) * 0.35;
+  opponent.vx = 0; opponent.vy = 0;
+  opponent.attackCD = 30;   // small breather before first attack
+  opponent.flash = 0;
+
+  // Pick a colourful opponent template and apply ninja era styling
+  const tpl = OPPONENT_POOL[(state.level * 7 + match.opponentIdx * 3) % OPPONENT_POOL.length];
+  opponent.color = tpl.color;
+  opponent.face = tpl.face;
+  opponent.ninja = isNinjaLevel(state.level);
+  opponent.belt = opponent.ninja ? '#000000' : '#1f2937';
+
+  // Draw fighters
+  renderFighterTop($('playerFBody'), getEquippedChar());
+  renderFighterTop($('oppFBody'), opponent);
+
+  $('oppNum').textContent   = match.opponentIdx + 1;
+  $('oppTotal').textContent = match.opponentsTotal;
+
+  updateFighterPositions();
+  updateActionBtns();
+
+  match.active = true;
+  startTicker();
+}
+
+function startTicker() {
+  stopTicker();
+  match.intervalId = setInterval(tick, TICK_MS);
+}
+
+function stopTicker() {
+  if (match.intervalId) {
+    clearInterval(match.intervalId);
+    match.intervalId = null;
+  }
+}
+
+/* Per-tick velocity-with-friction update. */
+function applyMotion(f) {
+  f.x += f.vx;
+  f.y += f.vy;
+  f.vx *= FRICTION;
+  f.vy *= FRICTION;
+  if (Math.abs(f.vx) < 0.0005) f.vx = 0;
+  if (Math.abs(f.vy) < 0.0005) f.vy = 0;
+}
+
+function distFromCenter(f) { return Math.sqrt(f.x * f.x + f.y * f.y); }
+
+/* Unit vector from player to opponent + the distance between them. */
+function dirToOpponent() {
+  const dx = opponent.x - player.x;
+  const dy = opponent.y - player.y;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  if (d < 0.001) return { x: 1, y: 0, dist: 0 };
+  return { x: dx / d, y: dy / d, dist: d };
+}
+
+/* Main game loop tick (20 Hz). */
+function tick() {
+  if (!match.active) return;
+
+  applyMotion(player);
+  applyMotion(opponent);
+
+  // Opponent AI: close the distance and punch / kick when in range
+  const dx = player.x - opponent.x;
+  const dy = player.y - opponent.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  if (opponent.attackCD > 0) opponent.attackCD--;
+
+  if (dist < ATTACK_RANGE && opponent.attackCD <= 0) {
+    // Push the player away from the opponent
+    const ndx = dx / Math.max(dist, 0.01);
+    const ndy = dy / Math.max(dist, 0.01);
+    const force = opponentAttackForce(state.level);
+    player.vx += ndx * force;
+    player.vy += ndy * force;
+    player.flash = 4;
+    opponent.attackCD = opponentAttackInterval(state.level);
+    showHit(player.x - ndx * 0.10, player.y - ndy * 0.10, '\u{1F4A5}');
+  } else if (dist > ATTACK_RANGE * 0.7) {
+    // Walk toward the player
+    const speed = opponentSpeed(state.level);
+    if (dist > 0.001) {
+      opponent.vx += (dx / dist) * speed;
+      opponent.vy += (dy / dist) * speed;
+    }
+  }
+
+  // Tick down cooldowns
+  if (player.kickCD  > 0) player.kickCD--;
+  if (player.punchCD > 0) player.punchCD--;
+  if (player.flash   > 0) player.flash--;
+  if (opponent.flash > 0) opponent.flash--;
+
+  updateActionBtns();
+
+  // Win / lose: whichever fighter falls outside the ring loses
+  if (distFromCenter(opponent) > OUT_THRESHOLD) { endMatch(true);  return; }
+  if (distFromCenter(player)   > OUT_THRESHOLD) { endMatch(false); return; }
+
+  updateFighterPositions();
+}
+
+/* Sync DOM positions to the physics state. */
+function updateFighterPositions() {
+  const pl = $('playerF');
+  const op = $('oppF');
+  pl.style.left = ((player.x + 1) * 50) + '%';
+  pl.style.top  = ((player.y + 1) * 50) + '%';
+  op.style.left = ((opponent.x + 1) * 50) + '%';
+  op.style.top  = ((opponent.y + 1) * 50) + '%';
+
+  pl.classList.toggle('flash', player.flash > 0);
+  op.classList.toggle('flash', opponent.flash > 0);
+}
+
+/* Spawn a short-lived emoji burst at normalized (nx, ny) inside the ring. */
+function showHit(nx, ny, emoji) {
+  const ring = $('ring');
+  const fx = document.createElement('div');
+  fx.className = 'hit-fx';
+  fx.textContent = emoji;
+  fx.style.left = ((nx + 1) * 50) + '%';
+  fx.style.top  = ((ny + 1) * 50) + '%';
+  ring.appendChild(fx);
+  setTimeout(() => fx.remove(), 600);
+}
+
+/* Enable / disable / grey out the action buttons based on cooldowns. */
+function updateActionBtns() {
+  $('kickBtn').classList.toggle('cooldown', player.kickCD > 0);
+  $('kickBtn').disabled = player.kickCD > 0;
+  $('punchBtn').disabled = player.punchCD > 0;
+}
+
+/* --- Player actions ----------------------------------------- */
+
+function doMove() {
+  if (!match.active) return;
+  const dir = dirToOpponent();
+  player.vx += dir.x * MOVE_FORCE;
+  player.vy += dir.y * MOVE_FORCE;
+}
+
+function doPunch() {
+  if (!match.active || player.punchCD > 0) return;
+  player.punchCD = PUNCH_COOLDOWN_TICKS;
+
+  const ch = getEquippedChar();
+  const dir = dirToOpponent();
+
+  if (dir.dist <= ATTACK_RANGE) {
+    // Land a punch - push opponent away
+    const force = PUNCH_FORCE_BASE * ch.power;
+    opponent.vx += dir.x * force;
+    opponent.vy += dir.y * force;
+    opponent.flash = 4;
+    showHit(opponent.x - dir.x * 0.12, opponent.y - dir.y * 0.12, '\u{1F44A}');
+  } else {
+    // Miss - small forward lunge so the player still feels they did something
+    player.vx += dir.x * WHIFF_LUNGE;
+    player.vy += dir.y * WHIFF_LUNGE;
+  }
+}
+
+function doKick() {
+  if (!match.active || player.kickCD > 0) return;
+  player.kickCD = KICK_COOLDOWN_TICKS;
+
+  const ch = getEquippedChar();
+  const dir = dirToOpponent();
+
+  if (dir.dist <= ATTACK_RANGE) {
+    const force = KICK_FORCE_BASE * ch.power;
+    opponent.vx += dir.x * force;
+    opponent.vy += dir.y * force;
+    opponent.flash = 6;
+    showHit(opponent.x - dir.x * 0.12, opponent.y - dir.y * 0.12, '\u{1F9B5}');
+  } else {
+    player.vx += dir.x * WHIFF_LUNGE * 2;
+    player.vy += dir.y * WHIFF_LUNGE * 2;
+  }
+}
+
+/* --- End of match flow -------------------------------------- */
+
+function endMatch(won) {
+  match.active = false;
+  stopTicker();
+
+  if (!won) {
+    showOverlay({
+      emoji: '\u{1F605}',
+      title: 'You got knocked out!',
+      text: 'No worries - have another go!',
+      buttons: [
+        { label: 'Try Again', style: 'green', onClick: beginLevel },
+        { label: 'Menu',      style: 'red',   onClick: () => showScreen('startScreen') },
+      ],
+    });
+    return;
+  }
+
+  // Won this opponent
+  const reward = rewardForLevel(state.level);
+  state.coins += reward;
+  updateHud();
+  saveState();
+
+  match.opponentIdx++;
+
+  // More opponents this level?
+  if (match.opponentIdx < match.opponentsTotal) {
+    const left = match.opponentsTotal - match.opponentIdx;
+    showOverlay({
+      emoji: '\u{1F44F}',
+      title: 'Beauty!',
+      text: '+' + reward + ' coins!\n' + left + ' opponent' + (left === 1 ? '' : 's') + ' to go.',
+      buttons: [{ label: 'Next Opponent', style: 'green', onClick: setupOpponent }],
+    });
+    return;
+  }
+
+  // Level cleared
+  if (state.level >= MAX_LEVEL) {
+    saveState();
+    showVictory();
+    return;
+  }
+
+  state.level++;
+  saveState();
+  updateHud();
+  updateTitle();
+  spawnConfetti(20);
+
+  showOverlay({
+    emoji: '\u{1F389}',
+    title: 'Level Cleared!',
+    text: '+' + reward + ' coins.\nReady for level ' + state.level + '?',
+    buttons: [
+      { label: 'Battle!', style: 'green', onClick: startLevel },
+      { label: 'Shop',    style: 'blue',  onClick: showShop },
+      { label: 'Menu',    style: 'red',   onClick: () => showScreen('startScreen') },
+    ],
+  });
+}
+
+/* ============================================================
+   SHOP LOGIC
+   ============================================================ */
+function showShop() {
+  const roster   = getCurrentRoster();
+  const owned    = getOwnedIds();
+  const equipped = getEquippedId();
+
+  $('shopHint').textContent = isNinjaLevel(state.level)
+    ? 'Pick a ninja - stronger fighters hit harder!'
+    : 'Pick a sumo - stronger fighters hit harder!';
+
+  const list = $('shopList');
+  list.innerHTML = '';
+
+  roster.forEach(char => {
+    const item = document.createElement('div');
+    item.className = 'shop-item';
+
+    const isOwned    = owned.includes(char.id);
+    const isEquipped = char.id === equipped;
+    if (isEquipped)   item.classList.add('equipped');
+    else if (isOwned) item.classList.add('owned');
+
+    // Preview
+    const preview = document.createElement('div');
+    preview.className = 'shop-preview';
+    renderShopPreview(preview, char);
+    item.appendChild(preview);
+
+    // Info
+    const info = document.createElement('div');
+    info.className = 'shop-info';
+    const muscles = '\u{1F4AA}'.repeat(Math.round(char.power * 2));
+    info.innerHTML =
+      '<div class="shop-name">' + char.name + '</div>' +
+      '<div class="shop-power">Power: ' + muscles + '</div>' +
+      (isOwned ? '' : '<div class="shop-cost">\u{1F4B0} ' + char.cost + '</div>');
+    item.appendChild(info);
+
+    // Action button
+    const btn = document.createElement('button');
+    if (isEquipped) {
+      btn.className = 'btn small yellow';
+      btn.textContent = 'Wearing';
+      btn.disabled = true;
+    } else if (isOwned) {
+      btn.className = 'btn small green';
+      btn.textContent = 'Wear';
+      btn.addEventListener('click', () => { equipChar(char.id); showShop(); });
+    } else if (state.coins >= char.cost) {
+      btn.className = 'btn small blue';
+      btn.textContent = 'Buy';
+      btn.addEventListener('click', () => buyChar(char));
+    } else {
+      btn.className = 'btn small';
+      btn.textContent = 'Buy';
+      btn.disabled = true;
+    }
+    item.appendChild(btn);
+
+    list.appendChild(item);
+  });
+
+  showScreen('shopScreen');
+}
+
+function equipChar(id) {
+  if (isNinjaLevel(state.level)) state.equippedNinja = id;
+  else                           state.equippedSumo  = id;
+  saveState();
+}
+
+function buyChar(char) {
+  if (state.coins < char.cost) return;
+  state.coins -= char.cost;
+  if (isNinjaLevel(state.level)) {
+    state.ownedNinja.push(char.id);
+    state.equippedNinja = char.id;
+  } else {
+    state.ownedSumo.push(char.id);
+    state.equippedSumo = char.id;
+  }
+  saveState();
+  updateHud();
+  showShop();
+}
+
+/* ============================================================
+   VICTORY
+   ============================================================ */
+function showVictory() {
+  showScreen('victoryScreen');
+  spawnConfetti(120);
+  let bursts = 0;
+  const burstId = setInterval(() => {
+    spawnConfetti(40);
+    if (++bursts >= 4) clearInterval(burstId);
+  }, 800);
+}
+
+/* ============================================================
+   EVENT WIRING
+   ============================================================ */
+function wireEvents() {
+  $('playBtn').addEventListener('click', goToMatch);
+  $('shopBtn').addEventListener('click', showShop);
+  $('resetBtn').addEventListener('click', confirmReset);
+  $('shopBackBtn').addEventListener('click', () => showScreen('startScreen'));
+  $('victoryResetBtn').addEventListener('click', confirmReset);
+
+  $('quitBtn').addEventListener('click', () => {
+    if (match.active) {
+      match.active = false;
+      stopTicker();
+    }
+    showScreen('startScreen');
+  });
+
+  // Action buttons - pointerdown for snappy mouse + touch response
+  const wireAction = (id, fn) => {
+    const btn = $(id);
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      fn();
+    });
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  };
+  wireAction('punchBtn', doPunch);
+  wireAction('kickBtn',  doKick);
+  wireAction('moveBtn',  doMove);
+
+  // Keyboard support for desktop:
+  //   P / Space / J / 1 = punch
+  //   K / 2             = kick
+  //   M / L / 3         = move
+  window.addEventListener('keydown', (e) => {
+    if (!match.active) return;
+    const k = e.key.toLowerCase();
+    if (k === 'p' || k === ' ' || k === 'j' || k === '1') { e.preventDefault(); doPunch(); }
+    else if (k === 'k' || k === '2')                       { e.preventDefault(); doKick();  }
+    else if (k === 'm' || k === 'l' || k === '3')          { e.preventDefault(); doMove();  }
+  });
+
+  // Keep positions correct on window resize
+  window.addEventListener('resize', () => {
+    if (match.active) updateFighterPositions();
+  });
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  loadState();
+  updateHud();
+  updateTitle();
+  wireEvents();
+
+  if (state.level > MAX_LEVEL) state.level = MAX_LEVEL;
+
+  showScreen('startScreen');
+}
+
+init();
+</script>
+</body>
+</html>
