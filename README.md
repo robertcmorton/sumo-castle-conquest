@@ -18,3 +18,4 @@ Open [`index.html`](index.html) in any modern browser, or visit the deployed ver
 ## Other games in this repo
 
 - [`sumo-smash.html`](sumo-smash.html) — Sumo & Ninja, an earlier game by Leo
+- [`barrier-battle.html`](barrier-battle.html) — Barrier Battle: Blue vs Red. Chop trees to build your wall, fight off giant animals, and smash the red barrier across 1000 levels
