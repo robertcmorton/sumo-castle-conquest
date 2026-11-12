@@ -38,6 +38,7 @@ button {
   background: #334155; box-shadow: 0 0.2em 0 #1e293b; transition: transform .08s;
 }
 button:active { transform: translateY(0.15em); box-shadow: 0 0.05em 0 #1e293b; }
+a.btn { font-weight: bold; color: #fff; text-decoration: none; border-radius: 0.7em; padding: 0.45em 1.1em; font-size: 1.1em; background: #334155; box-shadow: 0 0.2em 0 #1e293b; }
 button.go { background: #2563eb; box-shadow: 0 0.22em 0 #1e3a8a; font-size: 1.6em; padding: 0.4em 1.6em; }
 button.red { background: #dc2626; box-shadow: 0 0.22em 0 #7f1d1d; }
 button:disabled { opacity: .35; }
@@ -67,12 +68,13 @@ button:disabled { opacity: .35; }
     </div>
     <button class="go" id="play">PLAY ▶</button>
     <div class="small" id="starTotal"></div>
+    <a class="btn" href="index.html">🎮 All games</a>
   </div>
 
   <div id="pause" class="screen hidden">
     <h2>Paused</h2>
     <button class="go" id="resume">Keep playing</button>
-    <div class="row"><button id="restart">Restart level</button><button id="menu1">Menu</button></div>
+    <div class="row"><button id="restart">Restart level</button><button id="menu1">Menu</button><a class="btn" href="index.html">🎮 All games</a></div>
   </div>
 
   <div id="win" class="screen hidden">

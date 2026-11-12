@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sumo Castle Conquest!</title>
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+body {
+  background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 50%, #2563eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#game {
+  width: 100%;
+  max-width: 900px;
+  height: 100%;
+  background:
+    repeating-linear-gradient(0deg, transparent 0, transparent 28px, rgba(180,200,230,0.25) 28px, rgba(180,200,230,0.25) 29px),
+    linear-gradient(180deg, #fffef9 0%, #fef3c7 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 900px) {
+  body { padding: 20px; }
+  #game {
+    border-radius: 24px;
+    height: calc(100vh - 40px);
+    max-height: 820px;
+  }
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+/* HUD */
+.hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.tag {
+  background: white;
+  border: 3px solid #1e3a8a;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.95em;
+  font-weight: bold;
+  color: #1e3a8a;
+  box-shadow: 0 3px 0 #1e3a8a, 0 5px 10px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+}
+
+.tag.red { border-color: #b91c1c; color: #b91c1c; box-shadow: 0 3px 0 #b91c1c, 0 5px 10px rgba(0,0,0,0.15); }
+.tag.hint { background: #fef3c7; border-color: #92400e; color: #78350f; box-shadow: 0 3px 0 #92400e, 0 5px 10px rgba(0,0,0,0.15); font-size: 0.85em; }
+
+.bridge-btn {
+  pointer-events: auto;
+  background: #f59e0b;
+  color: white;
+  border: 3px solid white;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.95em;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #b45309, 0 6px 12px rgba(0, 0, 0, 0.2);
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.bridge-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #b45309; }
+.bridge-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+
+.newgame-btn {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 60;
+  pointer-events: auto;
+  background: #3b82f6;
+  color: white;
+  border: 3px solid white;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.9em;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #1e40af, 0 6px 12px rgba(0, 0, 0, 0.2);
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.newgame-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #1e40af; }
+
+.level-btn {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 60;
+  pointer-events: auto;
+  background: #8b5cf6;
+  color: white;
+  border: 3px solid white;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.9em;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #5b21b6, 0 6px 12px rgba(0, 0, 0, 0.2);
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.level-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #5b21b6; }
+
+/* Level select grid */
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 6px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 10px;
+  background: white;
+  border: 3px dashed #5b21b6;
+  border-radius: 16px;
+}
+.lvl-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.85em;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 2px solid;
+  font-family: inherit;
+  background: #e5e7eb;
+  color: #9ca3af;
+  border-color: #d1d5db;
+}
+.lvl-cell.unlocked {
+  background: #3b82f6;
+  color: white;
+  border-color: #1e40af;
+  box-shadow: 0 2px 0 #1e40af;
+}
+.lvl-cell.unlocked:active { transform: translateY(2px); box-shadow: none; }
+.lvl-cell.current {
+  background: #f59e0b;
+  border-color: #92400e;
+  box-shadow: 0 2px 0 #92400e;
+  color: white;
+}
+.lvl-cell.beaten {
+  background: #15803d;
+  border-color: #14532d;
+  color: white;
+}
+
+.level-display {
+  font-size: 1.1em;
+  color: #5b21b6;
+  font-weight: bold;
+  margin: 4px 0;
+}
+
+/* Screens */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  gap: 16px;
+  background: rgba(255, 251, 235, 0.95);
+  z-index: 100;
+}
+.screen.active { display: flex; }
+
+h1 {
+  font-size: clamp(2em, 7vw, 3.5em);
+  color: #b91c1c;
+  text-align: center;
+  line-height: 1.1;
+  text-shadow:
+    3px 3px 0 #fff,
+    -2px -2px 0 #fff,
+    2px -2px 0 #fff,
+    -2px 2px 0 #fff,
+    6px 6px 0 rgba(0, 0, 0, 0.2);
+  margin: 6px 0;
+  transform: rotate(-2deg);
+}
+
+h2 {
+  font-size: clamp(1.4em, 4vw, 2em);
+  color: #1e3a8a;
+  text-align: center;
+}
+
+p {
+  font-size: 1.05em;
+  text-align: center;
+  line-height: 1.5;
+  color: #374151;
+  max-width: 600px;
+}
+
+.btn {
+  background: #ef4444;
+  color: white;
+  border: 4px solid white;
+  border-radius: 999px;
+  padding: 14px 36px;
+  font-size: clamp(1.1em, 3vw, 1.4em);
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 6px 0 #991b1b, 0 8px 16px rgba(0, 0, 0, 0.25);
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  min-width: 180px;
+}
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #991b1b; }
+.btn.blue { background: #3b82f6; box-shadow: 0 6px 0 #1e40af, 0 8px 16px rgba(0,0,0,0.25); }
+.btn.blue:active { box-shadow: 0 2px 0 #1e40af; }
+
+.rules {
+  background: white;
+  border: 3px dashed #92400e;
+  border-radius: 16px;
+  padding: 16px 22px;
+  max-width: 560px;
+  font-size: 0.95em;
+  line-height: 1.6;
+  color: #1f2937;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+}
+.rules ul { padding-left: 22px; }
+.rules li { margin: 4px 0; }
+.rules b.blue { color: #2563eb; }
+.rules b.red { color: #b91c1c; }
+.rules b.yellow { color: #ca8a04; }
+
+.credit {
+  position: absolute;
+  bottom: 12px;
+  font-size: 0.8em;
+  color: #6b7280;
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+<div id="game">
+
+  <div class="hud" id="hud">
+    <div class="tag" id="bluetag">YOU: 25</div>
+    <div class="tag hint" id="levelHud">LEVEL 1</div>
+    <div class="tag red" id="redtag">RED: 55</div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <button class="level-btn" id="levelSelectBtn">📋 LEVELS</button>
+  <button class="newgame-btn" id="newGameBtn">🔄 RESTART</button>
+
+  <!-- TITLE SCREEN -->
+  <div class="screen active" id="titleScreen">
+    <h1>SUMO CASTLE<br>CONQUEST!</h1>
+    <div class="level-display" id="titleLevelDisplay">Level 1 of 100</div>
+    <div class="rules">
+      <p style="margin-bottom:10px;"><b>How to play:</b></p>
+      <ul>
+        <li>Click <b class="blue">YOUR TOWER</b> then click another tower to send sumos!</li>
+        <li>When a tower's number hits <b>0</b> it becomes YOUR castle!</li>
+        <li><b>WIN:</b> capture the <b class="red">RED CASTLE</b></li>
+        <li>Beat all <b>100 LEVELS</b> to win the game!</li>
+      </ul>
+    </div>
+    <button class="btn" id="startBtn">PLAY!</button>
+    <button class="btn blue" id="titleLevelSelectBtn" style="font-size:1em;padding:10px 24px;">LEVEL SELECT</button>
+    <a class="btn blue" href="index.html" style="font-size:0.9em;padding:8px 22px;text-decoration:none;min-width:0;">🎮 ALL GAMES</a>
+    <div class="credit">a game by Leo</div>
+  </div>
+
+  <!-- LEVEL SELECT SCREEN -->
+  <div class="screen" id="levelSelectScreen">
+    <h2 style="color:#5b21b6;">CHOOSE A LEVEL</h2>
+    <div class="level-grid" id="levelGrid"></div>
+    <button class="btn blue" id="closeLevelSelectBtn" style="font-size:1em;padding:10px 24px;">← BACK</button>
+  </div>
+
+  <!-- WIN SCREEN -->
+  <div class="screen" id="winScreen">
+    <h1 style="color:#15803d;">LEVEL <span id="winLevel">1</span><br>COMPLETE!</h1>
+    <p style="font-size:3em;">🏯</p>
+    <h2 id="winSubtext">Great job!</h2>
+    <button class="btn" id="nextLevelBtn">NEXT LEVEL →</button>
+    <button class="btn blue" onclick="restart()" style="font-size:1em;padding:10px 24px;">REPLAY</button>
+  </div>
+
+  <!-- FINAL WIN SCREEN -->
+  <div class="screen" id="finalWinScreen">
+    <h1 style="color:#15803d;">🏆 YOU BEAT ALL<br>100 LEVELS! 🏆</h1>
+    <p style="font-size:1.3em;">You are the<br><b>SUMO CASTLE CHAMPION!</b></p>
+    <p style="font-size:4em;">🏯👑</p>
+    <button class="btn blue" id="restartCampaignBtn">PLAY AGAIN</button>
+  </div>
+
+  <!-- LOSE SCREEN -->
+  <div class="screen" id="loseScreen">
+    <h1>OH NO!</h1>
+    <h2>The red sumos took your castle!</h2>
+    <p style="font-size:3em;">💀</p>
+    <button class="btn" onclick="restart()">TRY AGAIN</button>
+    <button class="btn blue" id="loseLevelSelectBtn" style="font-size:1em;padding:10px 24px;">LEVEL SELECT</button>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+//  SUMO CASTLE CONQUEST - game logic
+// ============================================================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Logical resolution we paint into; CSS scales to fit.
+const W = 900, H = 800;
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Logical drawing surface size in CSS px:
+  scale.x = rect.width / W;
+  scale.y = rect.height / H;
+}
+const scale = { x: 1, y: 1 };
+window.addEventListener('resize', resizeCanvas);
+
+// ----------- GAME STATE -----------
+
+const TEAM = {
+  PLAYER: 'player',
+  ENEMY:  'enemy',
+  NEUTRAL:'neutral'
+};
+
+const COLORS = {
+  player:  { fill:'#3b82f6', dark:'#1e3a8a', belt:'#1e40af', name:'BLUE' },
+  ally:    { fill:'#facc15', dark:'#854d0e', belt:'#a16207', name:'YELLOW' },
+  enemy:   { fill:'#ef4444', dark:'#7f1d1d', belt:'#991b1b', name:'RED' },
+  neutral: { fill:'#a3a3a3', dark:'#404040', belt:'#525252', name:'NEUTRAL' }
+};
+
+// Tower definitions (matches Leo's drawing)
+let towers, paths, waves, woodPile, selected, wobbleSeed, gameState, lastAi, timeAccum, levelConfig;
+
+// ----------- LEVEL SYSTEM (100 levels) -----------
+
+const MAX_LEVEL = 100;
+let currentLevel = 1;
+let highestUnlocked = 1;
+
+function loadProgress() {
+  try {
+    const saved = parseInt(localStorage.getItem('leo_castle_unlocked') || '1');
+    highestUnlocked = Math.min(MAX_LEVEL, Math.max(1, saved));
+    const cur = parseInt(localStorage.getItem('leo_castle_current') || '1');
+    currentLevel = Math.min(highestUnlocked, Math.max(1, cur));
+  } catch(e) {
+    highestUnlocked = 1;
+    currentLevel = 1;
+  }
+}
+
+function saveProgress() {
+  try {
+    localStorage.setItem('leo_castle_unlocked', String(highestUnlocked));
+    localStorage.setItem('leo_castle_current', String(currentLevel));
+  } catch(e) {}
+}
+
+// Difficulty curve. Returns config for a given level (1-100).
+function getLevelConfig(level) {
+  const L = Math.max(1, Math.min(MAX_LEVEL, level));
+  // t goes 0..1 across the 100 levels
+  const t = (L - 1) / 99;
+  // Slower ramp for first 10 levels (super easy intro)
+  const easyZone = L <= 10 ? (L - 1) / 10 * 0.15 : 0.15 + (t - 0.10) * 1.0;
+  const d = Math.max(0, Math.min(1, easyZone));
+
+  return {
+    level: L,
+    // Player starting HP (stays generous)
+    playerBlueHp:   Math.round(35 - d * 5),       // 35 -> 30
+    playerYellowHp: Math.round(40 - d * 8),       // 40 -> 32, but yellow may not exist on early levels
+    yellowEnabled:  L >= 3,                        // levels 1-2: no yellow ally
+    // Enemy starting HP - very small at start, large at end
+    enemyRedTlHp:   L <= 2 ? 0 : Math.round(3 + d * 35),     // levels 1-2: no second enemy
+    enemyCastleHp:  Math.round(4 + d * 35),       // 4 -> 39
+    redTlEnabled:   L >= 3,
+    // Regen rates (smaller = faster)
+    playerRegenSec: 1.2 + d * 0.4,                // 1.2s -> 1.6s (player slightly slower at high levels)
+    enemyRegenSec:  4.0 - d * 2.5,                // 4.0s -> 1.5s
+    // AI cadence
+    aiIntervalMin:  Math.max(2.0, 12 - d * 9),    // 12s -> 3s
+    aiIntervalMax:  Math.max(3.5, 15 - d * 10),   // 15s -> 5s
+    aiSkill: d,                                    // 0 = picks weakest dumbly, 1 = smart
+    aiMinHpToSend: Math.max(3, Math.round(10 - d * 6)),  // needs 10hp early, 4hp later
+    // Obstacles
+    hasLava: L >= 20,
+    hasRock: L >= 8,
+    // Sumo speed
+    sumoSpeed: 0.10 + d * 0.03,                   // 0.10 -> 0.13 frac/sec
+  };
+}
+
+function initGame(level) {
+  if (level !== undefined) currentLevel = level;
+  levelConfig = getLevelConfig(currentLevel);
+  const cfg = levelConfig;
+
+  towers = [];
+  // Player blue castle
+  towers.push({ id:'blue', x:140, y:560, hp:cfg.playerBlueHp, team:'player', label:'YOU', variant:'castle' });
+  // Yellow ally
+  if (cfg.yellowEnabled) {
+    towers.push({ id:'yellow', x:740, y:640, hp:cfg.playerYellowHp, team:'player', label:'YELLOW', variant:'tower', skin:'ally' });
+  }
+  // Neutral center
+  towers.push({ id:'center', x:460, y:380, hp:0, team:'neutral', label:'', variant:'tower' });
+  // Enemy redTL
+  if (cfg.redTlEnabled) {
+    towers.push({ id:'redTL', x:260, y:130, hp:cfg.enemyRedTlHp, team:'enemy', label:'', variant:'tower' });
+  }
+  // Enemy red castle
+  towers.push({ id:'redCastle', x:740, y:120, hp:cfg.enemyCastleHp, team:'enemy', label:'RED CASTLE', variant:'castle' });
+
+  // Paths - rebuild based on which towers exist
+  paths = [];
+  const hasYellow = cfg.yellowEnabled;
+  const hasRedTL = cfg.redTlEnabled;
+
+  // Blue -> Center
+  paths.push({ a:'blue', b:'center', pts:[[140,560],[290,470],[460,380]], lava:cfg.hasLava, bridge:false });
+  // Blue -> Yellow
+  if (hasYellow) {
+    paths.push({ a:'blue', b:'yellow', pts:[[140,560],[300,680],[560,690],[740,640]] });
+    paths.push({ a:'yellow', b:'center', pts:[[740,640],[610,520],[460,380]] });
+  }
+  // Center -> Red TL
+  if (hasRedTL) {
+    paths.push({ a:'center', b:'redTL', pts:[[460,380],[370,260],[260,130]] });
+    paths.push({ a:'redTL', b:'redCastle', pts:[[260,130],[500,90],[740,120]] });
+  }
+  // Center -> Red Castle (always exists, the only route to the goal in early levels)
+  paths.push({ a:'center', b:'redCastle', pts:[[460,380],[600,250],[740,120]] });
+
+  waves = [];
+  woodPile = { x:830, y:430, available:cfg.hasLava };
+  selected = null;
+  wobbleSeed = Math.random()*1000;
+  gameState = 'play';
+  lastAi = -2;  // give player 2 extra seconds at start
+  timeAccum = 0;
+
+  document.getElementById('levelHud').textContent = `LEVEL ${cfg.level}`;
+  updateHUD();
+}
+
+// ----------- HELPERS -----------
+
+function towerById(id) { return towers.find(t => t.id === id); }
+function teamColor(team, skin) {
+  if (skin === 'ally') return COLORS.ally;
+  return COLORS[team] || COLORS.neutral;
+}
+
+function pathBetween(a, b) {
+  return paths.find(p =>
+    (p.a === a && p.b === b) || (p.a === b && p.b === a)
+  );
+}
+
+function pathLength(path) {
+  let len = 0;
+  for (let i = 1; i < path.pts.length; i++) {
+    const [x1,y1] = path.pts[i-1], [x2,y2] = path.pts[i];
+    len += Math.hypot(x2-x1, y2-y1);
+  }
+  return len;
+}
+
+function pointAlongPath(path, t) {
+  // t in [0..1]
+  const total = pathLength(path);
+  let target = t * total;
+  for (let i = 1; i < path.pts.length; i++) {
+    const [x1,y1] = path.pts[i-1], [x2,y2] = path.pts[i];
+    const seg = Math.hypot(x2-x1, y2-y1);
+    if (target <= seg) {
+      const f = target/seg;
+      return [x1+(x2-x1)*f, y1+(y2-y1)*f];
+    }
+    target -= seg;
+  }
+  const last = path.pts[path.pts.length-1];
+  return [last[0], last[1]];
+}
+
+// ----------- ACTIONS -----------
+
+function sendWave(fromTower, toTower) {
+  if (fromTower.id === toTower.id) return;
+  const path = pathBetween(fromTower.id, toTower.id);
+  if (!path) {
+    flashHint("No path! A rock blocks the way.", 1600);
+    return;
+  }
+  if (path.lava && !path.bridge) {
+    flashHint("LAVA! Click BUILD BRIDGE first.", 1800);
+    return;
+  }
+  const count = Math.floor(fromTower.hp / 2);
+  if (count < 1) {
+    flashHint("Not enough sumos!", 1000);
+    return;
+  }
+  fromTower.hp -= count;
+  // Direction relative to path.a -> path.b
+  const forward = (path.a === fromTower.id);
+  waves.push({
+    pathId: paths.indexOf(path),
+    count,
+    team: fromTower.team,
+    skin: fromTower.skin,
+    fromId: fromTower.id,
+    toId: toTower.id,
+    forward,
+    progress: 0,
+    speed: levelConfig ? levelConfig.sumoSpeed : 0.10
+  });
+}
+
+function buildBridge() {
+  const lavaPath = paths.find(p => p.lava);
+  if (!lavaPath || lavaPath.bridge) return;
+  // Need an adjacent friendly tower with >=8 HP
+  const blue = towerById('blue');
+  if (blue.team !== 'player' || blue.hp < 8) {
+    flashHint("Need 8 HP at your castle to build!", 1500);
+    return;
+  }
+  blue.hp -= 8;
+  lavaPath.bridge = true;
+  lavaPath.bridgeAnim = 0;  // animate construction
+  document.getElementById('bridgeBtn')?.remove();
+  flashHint("Bridge built! Lava path is open!", 1800);
+  updateHUD();
+}
+
+let hintTimer = null;
+function flashHint(text, duration=1500) {
+  const hint = document.getElementById('levelHud');
+  if (!hint) return;
+  hint.textContent = text;
+  hint.style.background = '#fef08a';
+  if (hintTimer) clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => {
+    hint.textContent = `LEVEL ${currentLevel}`;
+    hint.style.background = '';
+  }, duration);
+}
+
+// ----------- INPUT -----------
+
+function getCanvasCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const cx = (e.clientX !== undefined) ? e.clientX : e.touches[0].clientX;
+  const cy = (e.clientY !== undefined) ? e.clientY : e.touches[0].clientY;
+  return {
+    x: (cx - rect.left) * (W / rect.width),
+    y: (cy - rect.top)  * (H / rect.height)
+  };
+}
+
+function towerAt(x, y) {
+  for (const t of towers) {
+    const r = (t.variant === 'castle') ? 48 : 38;
+    if (Math.hypot(t.x - x, t.y - y) < r) return t;
+  }
+  return null;
+}
+
+function handleClick(e) {
+  if (gameState !== 'play') return;
+  e.preventDefault();
+  const { x, y } = getCanvasCoords(e);
+  const tower = towerAt(x, y);
+
+  if (!selected) {
+    if (tower && tower.team === 'player') {
+      selected = tower;
+    }
+  } else {
+    if (tower && tower.id !== selected.id) {
+      sendWave(selected, tower);
+    }
+    selected = null;
+  }
+}
+
+canvas.addEventListener('click', handleClick);
+canvas.addEventListener('touchstart', handleClick, {passive:false});
+
+// ----------- GAME LOOP -----------
+
+let lastTime = 0;
+function loop(now) {
+  if (!lastTime) lastTime = now;
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+  if (gameState === 'play') {
+    update(dt);
+  }
+  render();
+  requestAnimationFrame(loop);
+}
+
+function update(dt) {
+  timeAccum += dt;
+
+  // HP regen on owned towers - rate depends on team and level
+  for (const t of towers) {
+    if (t.team !== 'neutral') {
+      const rate = t.team === 'player' ? levelConfig.playerRegenSec : levelConfig.enemyRegenSec;
+      t._regen = (t._regen || 0) + dt;
+      if (t._regen >= rate) {
+        t._regen = 0;
+        t.hp += 1;
+      }
+    }
+  }
+
+  // Animate bridge build
+  for (const p of paths) {
+    if (p.bridge && p.bridgeAnim < 1) {
+      p.bridgeAnim = Math.min(1, p.bridgeAnim + dt * 0.5);
+    }
+  }
+
+  // Move waves
+  for (const w of waves) {
+    const path = paths[w.pathId];
+    let speed = w.speed;
+    // Lava (even bridged) slows slightly during animation
+    if (path.lava && !path.bridge) speed *= 0.0;  // shouldn't happen, but safety
+    w.progress += speed * dt;
+  }
+
+  // Wave-on-wave combat: two opposite-team waves on same path crossing meet
+  resolveWaveCollisions();
+
+  // Wave arrivals
+  for (let i = waves.length - 1; i >= 0; i--) {
+    const w = waves[i];
+    if (w.progress >= 1) {
+      arrive(w);
+      waves.splice(i, 1);
+    }
+  }
+
+  // Enemy AI tick
+  lastAi += dt;
+  const interval = levelConfig.aiIntervalMin + Math.random() * (levelConfig.aiIntervalMax - levelConfig.aiIntervalMin);
+  if (lastAi >= interval) {
+    lastAi = 0;
+    enemyAI();
+  }
+
+  // Win/lose check
+  const blueAlive = towers.some(t => t.id === 'blue' && t.team === 'player');
+  const redCastle = towerById('redCastle');
+  if (!blueAlive) endGame('lose');
+  else if (redCastle.team === 'player') endGame('win');
+
+  updateHUD();
+}
+
+function resolveWaveCollisions() {
+  // For each path, find waves going opposite directions. If they cross, smaller dies.
+  for (let i = 0; i < waves.length; i++) {
+    for (let j = i+1; j < waves.length; j++) {
+      const a = waves[i], b = waves[j];
+      if (a.pathId !== b.pathId) continue;
+      if (a.team === b.team) continue;
+      if (a.forward === b.forward) continue;  // same direction - no meet
+      // Position along path: forward => progress, reverse => 1-progress
+      const aPos = a.forward ? a.progress : 1 - a.progress;
+      const bPos = b.forward ? b.progress : 1 - b.progress;
+      if (Math.abs(aPos - bPos) < 0.04) {
+        // Battle in the middle
+        if (a.count > b.count) {
+          a.count -= b.count;
+          b.count = 0;
+        } else if (b.count > a.count) {
+          b.count -= a.count;
+          a.count = 0;
+        } else {
+          a.count = 0;
+          b.count = 0;
+        }
+      }
+    }
+  }
+  for (let i = waves.length - 1; i >= 0; i--) {
+    if (waves[i].count <= 0) waves.splice(i, 1);
+  }
+}
+
+function arrive(wave) {
+  const target = towerById(wave.toId);
+  if (!target) return;
+  if (target.team === wave.team) {
+    // Reinforce
+    target.hp += wave.count;
+  } else {
+    // Attack
+    target.hp -= wave.count;
+    if (target.hp <= 0) {
+      const leftover = -target.hp;
+      target.team = wave.team;
+      target.skin = wave.skin;
+      target.hp = Math.max(1, leftover);
+      if (target.id === 'redCastle') {
+        // win condition checked in update
+      }
+    }
+  }
+}
+
+// ----------- ENEMY AI -----------
+
+function enemyAI() {
+  const minHp = levelConfig.aiMinHpToSend;
+  const enemyTowers = towers.filter(t => t.team === 'enemy' && t.hp >= minHp);
+  if (enemyTowers.length === 0) return;
+  // Lower skill = sometimes picks random tower; higher = always largest
+  enemyTowers.sort((a,b) => b.hp - a.hp);
+  let from = enemyTowers[0];
+  if (Math.random() > levelConfig.aiSkill) {
+    from = enemyTowers[Math.floor(Math.random()*enemyTowers.length)];
+  }
+
+  // Reachable non-enemy towers
+  const reachable = paths
+    .filter(p => p.a === from.id || p.b === from.id)
+    .filter(p => !p.lava || p.bridge)
+    .map(p => p.a === from.id ? p.b : p.a)
+    .map(id => towerById(id))
+    .filter(t => t && t.team !== 'enemy');
+
+  if (reachable.length === 0) return;
+
+  let target;
+  if (Math.random() < levelConfig.aiSkill) {
+    // Smart: weakest player tower; or neutral if very weak
+    reachable.sort((a,b) => a.hp - b.hp);
+    target = reachable[0];
+  } else {
+    // Dumb: random pick
+    target = reachable[Math.floor(Math.random()*reachable.length)];
+  }
+  sendWave(from, target);
+}
+
+// ----------- RENDER -----------
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+
+  drawObstacles();
+  drawPaths();
+  drawWoodPile();
+  drawTowers();
+  drawWaves();
+  drawSelectionRing();
+}
+
+function wobble(seed, amp=1.5) {
+  return Math.sin(seed + timeAccum * 1.5) * amp;
+}
+
+function drawPaths() {
+  for (const p of paths) {
+    drawWobblyPath(p);
+  }
+}
+
+function drawWobblyPath(p) {
+  ctx.save();
+  // Dashed cream path
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 4;
+  ctx.setLineDash([12, 8]);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(p.pts[0][0], p.pts[0][1]);
+  for (let i = 1; i < p.pts.length; i++) {
+    ctx.lineTo(p.pts[i][0], p.pts[i][1]);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Lava overlay - the middle waypoint area
+  if (p.lava) {
+    const mid = p.pts[Math.floor(p.pts.length/2)];
+    if (!p.bridge) {
+      // Draw lava blob across the middle two waypoints
+      drawLavaPatch(p);
+    } else {
+      drawBridge(p);
+    }
+  }
+  ctx.restore();
+}
+
+function drawLavaPatch(p) {
+  // Lava patch covering segments 0->1
+  const [x1,y1] = p.pts[0];
+  const [x2,y2] = p.pts[1];
+  const mx = (x1+x2)/2 + 20;
+  const my = (y1+y2)/2;
+
+  ctx.save();
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath();
+  for (let a = 0; a < Math.PI*2; a += 0.2) {
+    const r = 55 + Math.sin(a*4 + timeAccum*3) * 8;
+    const x = mx + Math.cos(a) * r * 1.2;
+    const y = my + Math.sin(a) * r * 0.7;
+    if (a === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Hot center
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  for (let a = 0; a < Math.PI*2; a += 0.3) {
+    const r = 30 + Math.sin(a*3 + timeAccum*4) * 6;
+    const x = mx + Math.cos(a) * r * 1.1;
+    const y = my + Math.sin(a) * r * 0.6;
+    if (a === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#7c2d12';
+  ctx.font = 'bold 16px Comic Sans MS, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('LAVA!', mx, my + 4);
+  ctx.restore();
+}
+
+function drawBridge(p) {
+  const [x1,y1] = p.pts[0];
+  const [x2,y2] = p.pts[1];
+  const t = p.bridgeAnim;
+  const mx1 = x1, my1 = y1;
+  const mx2 = x1 + (x2-x1)*t, my2 = y1 + (y2-y1)*t;
+
+  ctx.save();
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(mx1, my1);
+  ctx.lineTo(mx2, my2);
+  ctx.stroke();
+
+  // Plank marks
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 2;
+  const segs = 8;
+  for (let i = 0; i <= segs; i++) {
+    const f = i / segs;
+    const px = mx1 + (mx2-mx1)*f;
+    const py = my1 + (my2-my1)*f;
+    const dx = mx2-mx1, dy = my2-my1;
+    const len = Math.hypot(dx,dy) || 1;
+    const nx = -dy/len, ny = dx/len;
+    ctx.beginPath();
+    ctx.moveTo(px + nx*6, py + ny*6);
+    ctx.lineTo(px - nx*6, py - ny*6);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawObstacles() {
+  // Big rock between yellow and red castle (the path doesn't go through here)
+  drawRock(820, 320);
+  // Smaller decorative rocks
+  drawRock(560, 540, 0.6);
+  drawRock(200, 320, 0.7);
+
+  // River along the bottom (visual flavor matching drawing's blue river)
+  ctx.save();
+  ctx.strokeStyle = '#60a5fa';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    const y = 720 + i * 10;
+    ctx.moveTo(200, y);
+    for (let x = 200; x <= 700; x += 30) {
+      ctx.lineTo(x, y + Math.sin((x + timeAccum*40 + i*30) * 0.05) * 4);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawRock(cx, cy, size=1) {
+  ctx.save();
+  ctx.fillStyle = '#737373';
+  ctx.strokeStyle = '#262626';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  const pts = [
+    [-40,-10],[-30,-30],[-10,-35],[15,-30],[35,-15],
+    [40,10],[25,30],[0,35],[-25,28],[-40,15]
+  ];
+  for (let i = 0; i < pts.length; i++) {
+    const x = cx + pts[i][0]*size;
+    const y = cy + pts[i][1]*size;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Highlights
+  ctx.strokeStyle = '#a3a3a3';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 20*size, cy - 5*size);
+  ctx.lineTo(cx + 5*size, cy + 15*size);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawWoodPile() {
+  if (!woodPile.available) return;
+  const {x, y} = woodPile;
+  ctx.save();
+  // Stack of logs (decorative - not interactive for now, kept simple)
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = '#92400e';
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y + i*7 - 8, 22, 6, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fcd34d';
+    ctx.beginPath();
+    ctx.ellipse(x - 18, y + i*7 - 8, 4, 5, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#451a03';
+  ctx.font = 'italic 13px Comic Sans MS, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('wood', x, y + 28);
+  ctx.restore();
+}
+
+function drawTowers() {
+  for (const t of towers) {
+    drawTower(t);
+  }
+}
+
+function drawTower(t) {
+  const col = teamColor(t.team, t.skin);
+  const isCastle = t.variant === 'castle';
+  const w = isCastle ? 86 : 70;
+  const h = isCastle ? 96 : 80;
+  const x = t.x - w/2;
+  const y = t.y - h/2;
+
+  ctx.save();
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(t.x, t.y + h/2 + 6, w/2 + 5, 8, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = col.fill;
+  ctx.strokeStyle = col.dark;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.rect(x, y + 12, w, h - 12);
+  ctx.fill();
+  ctx.stroke();
+
+  // Crenellations (top blocks)
+  const merlonCount = isCastle ? 5 : 4;
+  const mw = w / (merlonCount * 2 - 1);
+  for (let i = 0; i < merlonCount; i++) {
+    const mx = x + i * (mw * 2);
+    ctx.beginPath();
+    ctx.rect(mx, y, mw, 18);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Flag for castles
+  if (isCastle) {
+    ctx.strokeStyle = col.dark;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(t.x, y - 4);
+    ctx.lineTo(t.x, y - 36);
+    ctx.stroke();
+    ctx.fillStyle = col.fill;
+    ctx.strokeStyle = col.dark;
+    ctx.beginPath();
+    ctx.moveTo(t.x, y - 34);
+    ctx.lineTo(t.x + 22, y - 28);
+    ctx.lineTo(t.x, y - 22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Door
+  ctx.fillStyle = col.dark;
+  ctx.fillRect(t.x - 8, y + h - 18, 16, 18);
+
+  // HP number plate
+  const hpY = y - (isCastle ? 50 : 36);
+  ctx.fillStyle = 'white';
+  ctx.strokeStyle = col.dark;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(t.x - 28, hpY - 18, 56, 30, 8) : ctx.rect(t.x - 28, hpY - 18, 56, 30);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = col.dark;
+  ctx.font = 'bold 22px Comic Sans MS, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(t.hp, t.x, hpY + 5);
+
+  // Label
+  if (t.label) {
+    ctx.fillStyle = col.dark;
+    ctx.font = 'bold 13px Comic Sans MS, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(t.label, t.x, y + h + 22);
+  }
+
+  ctx.restore();
+}
+
+function drawSelectionRing() {
+  if (!selected) return;
+  ctx.save();
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 5;
+  ctx.setLineDash([8, 6]);
+  ctx.lineDashOffset = -timeAccum * 30;
+  const r = selected.variant === 'castle' ? 60 : 50;
+  ctx.beginPath();
+  ctx.arc(selected.x, selected.y, r + Math.sin(timeAccum*4)*3, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawWaves() {
+  for (const w of waves) {
+    const path = paths[w.pathId];
+    const t = w.forward ? w.progress : 1 - w.progress;
+    const [x, y] = pointAlongPath(path, t);
+    const col = teamColor(w.team, w.skin);
+    // Draw a clump of sumos
+    const n = Math.min(8, Math.max(1, Math.ceil(w.count / 3)));
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + timeAccum;
+      const ox = Math.cos(a) * 8;
+      const oy = Math.sin(a) * 6;
+      drawSumo(x + ox, y + oy + Math.sin(timeAccum*6 + i)*1.5, col);
+    }
+    // Count badge
+    ctx.save();
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = col.dark;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y - 22, 12, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = col.dark;
+    ctx.font = 'bold 12px Comic Sans MS, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(w.count, x, y - 18);
+    ctx.restore();
+  }
+}
+
+function drawSumo(x, y, col) {
+  ctx.save();
+  // Body
+  ctx.fillStyle = '#fef3c7';
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x, y, 9, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+  // Belt (team color)
+  ctx.fillStyle = col.belt;
+  ctx.fillRect(x - 8, y + 1, 16, 4);
+  // Topknot
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath();
+  ctx.arc(x, y - 8, 3, 0, Math.PI*2);
+  ctx.fill();
+  // Eyes
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath();
+  ctx.arc(x - 3, y - 2, 1.2, 0, Math.PI*2);
+  ctx.arc(x + 3, y - 2, 1.2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ----------- HUD -----------
+
+function updateHUD() {
+  const bluetag = document.getElementById('bluetag');
+  const redtag = document.getElementById('redtag');
+  const playerTotal = towers
+    .filter(t => t.team === 'player')
+    .reduce((s,t) => s + t.hp, 0);
+  const enemyTotal = towers
+    .filter(t => t.team === 'enemy')
+    .reduce((s,t) => s + t.hp, 0);
+  bluetag.textContent = `YOU: ${playerTotal}`;
+  redtag.textContent = `RED: ${enemyTotal}`;
+
+  // Ensure bridge button exists if lava unbuilt
+  const lavaPath = paths.find(p => p.lava);
+  let btn = document.getElementById('bridgeBtn');
+  if (lavaPath && !lavaPath.bridge && towerById('blue').team === 'player') {
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'bridgeBtn';
+      btn.className = 'bridge-btn';
+      btn.textContent = '🪵 BUILD BRIDGE (8 HP)';
+      btn.style.position = 'absolute';
+      btn.style.bottom = '14px';
+      btn.style.left = '50%';
+      btn.style.transform = 'translateX(-50%)';
+      btn.style.zIndex = '60';
+      btn.onclick = (e) => { e.stopPropagation(); buildBridge(); };
+      document.getElementById('game').appendChild(btn);
+    }
+    btn.classList.toggle('disabled', towerById('blue').hp < 8);
+  } else if (btn) {
+    btn.remove();
+  }
+}
+
+// ----------- END / RESTART -----------
+
+function hideAllScreens() {
+  ['titleScreen','levelSelectScreen','winScreen','loseScreen','finalWinScreen']
+    .forEach(id => document.getElementById(id).classList.remove('active'));
+}
+
+function endGame(result) {
+  gameState = result;
+  document.getElementById('bridgeBtn')?.remove();
+
+  if (result === 'win') {
+    // Unlock the next level
+    const wasLastLevel = currentLevel >= MAX_LEVEL;
+    if (currentLevel >= highestUnlocked && !wasLastLevel) {
+      highestUnlocked = Math.min(MAX_LEVEL, currentLevel + 1);
+    }
+    saveProgress();
+
+    if (wasLastLevel) {
+      hideAllScreens();
+      document.getElementById('finalWinScreen').classList.add('active');
+    } else {
+      document.getElementById('winLevel').textContent = currentLevel;
+      const sub = document.getElementById('winSubtext');
+      if (currentLevel < 10) sub.textContent = 'Nice work!';
+      else if (currentLevel < 30) sub.textContent = 'Awesome!';
+      else if (currentLevel < 60) sub.textContent = 'You\'re a sumo master!';
+      else if (currentLevel < 90) sub.textContent = 'Incredible!';
+      else sub.textContent = 'Almost a champion!';
+      hideAllScreens();
+      document.getElementById('winScreen').classList.add('active');
+    }
+  } else {
+    hideAllScreens();
+    document.getElementById('loseScreen').classList.add('active');
+  }
+}
+
+function restart() {
+  hideAllScreens();
+  document.getElementById('bridgeBtn')?.remove();
+  initGame(currentLevel);
+}
+
+function goToLevel(n) {
+  if (n < 1 || n > MAX_LEVEL) return;
+  if (n > highestUnlocked) return;
+  currentLevel = n;
+  saveProgress();
+  hideAllScreens();
+  document.getElementById('bridgeBtn')?.remove();
+  initGame(currentLevel);
+}
+
+function nextLevel() {
+  if (currentLevel < MAX_LEVEL) {
+    goToLevel(currentLevel + 1);
+  }
+}
+
+function showLevelSelect() {
+  buildLevelGrid();
+  hideAllScreens();
+  document.getElementById('levelSelectScreen').classList.add('active');
+}
+
+function buildLevelGrid() {
+  const grid = document.getElementById('levelGrid');
+  grid.innerHTML = '';
+  for (let i = 1; i <= MAX_LEVEL; i++) {
+    const cell = document.createElement('button');
+    cell.className = 'lvl-cell';
+    cell.textContent = i;
+    if (i < currentLevel && i < highestUnlocked) cell.classList.add('beaten');
+    if (i <= highestUnlocked) cell.classList.add('unlocked');
+    if (i === currentLevel) cell.classList.add('current');
+    if (i > highestUnlocked) {
+      cell.disabled = true;
+      cell.textContent = '🔒';
+    } else {
+      cell.onclick = () => goToLevel(i);
+    }
+    grid.appendChild(cell);
+  }
+}
+
+// Wire up all buttons
+document.getElementById('startBtn').addEventListener('click', () => {
+  hideAllScreens();
+  initGame(currentLevel);
+});
+
+document.getElementById('titleLevelSelectBtn').addEventListener('click', showLevelSelect);
+document.getElementById('closeLevelSelectBtn').addEventListener('click', () => {
+  hideAllScreens();
+  document.getElementById('titleScreen').classList.add('active');
+  document.getElementById('titleLevelDisplay').textContent = `Level ${currentLevel} of ${MAX_LEVEL}`;
+});
+
+document.getElementById('levelSelectBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  showLevelSelect();
+});
+
+document.getElementById('loseLevelSelectBtn').addEventListener('click', showLevelSelect);
+
+document.getElementById('nextLevelBtn').addEventListener('click', nextLevel);
+
+document.getElementById('restartCampaignBtn').addEventListener('click', () => {
+  highestUnlocked = 1;
+  currentLevel = 1;
+  saveProgress();
+  hideAllScreens();
+  initGame(1);
+});
+
+document.getElementById('newGameBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  restart();
+});
+
+// Boot
+loadProgress();
+document.getElementById('titleLevelDisplay').textContent = `Level ${currentLevel} of ${MAX_LEVEL}`;
+resizeCanvas();
+initGame(currentLevel);
+requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>
