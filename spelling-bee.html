@@ -1,0 +1,3181 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spelling Bee!</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%9D%3C/text%3E%3C/svg%3E">
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  min-height: 100%;
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
+  touch-action: manipulation;
+}
+
+body {
+  background: linear-gradient(135deg, #fde68a 0%, #fbbf24 35%, #f59e0b 100%);
+  min-height: 100vh;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 700px;
+}
+
+.card {
+  background: #fffef9;
+  border: 4px solid #78350f;
+  border-radius: 24px;
+  box-shadow: 0 8px 0 #78350f, 0 12px 24px rgba(0,0,0,0.2);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+header.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+h1 {
+  color: #78350f;
+  font-size: 1.6em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bee {
+  display: inline-block;
+  animation: buzz 2s ease-in-out infinite;
+}
+
+@keyframes buzz {
+  0%, 100% { transform: translate(0,0) rotate(0); }
+  25% { transform: translate(2px,-2px) rotate(-5deg); }
+  50% { transform: translate(-2px,2px) rotate(5deg); }
+  75% { transform: translate(2px,2px) rotate(-3deg); }
+}
+
+.tag {
+  background: #fef3c7;
+  border: 3px solid #78350f;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-weight: bold;
+  color: #78350f;
+  font-size: 0.95em;
+}
+
+.tag-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+button {
+  font-family: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  user-select: none;
+}
+
+.btn {
+  background: #fbbf24;
+  color: #78350f;
+  border: 3px solid #78350f;
+  border-radius: 16px;
+  padding: 10px 18px;
+  font-size: 1em;
+  box-shadow: 0 4px 0 #78350f;
+  transition: transform 0.05s, box-shadow 0.05s;
+}
+
+.btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #78350f;
+}
+
+.btn-primary {
+  background: #34d399;
+  color: white;
+  border-color: #065f46;
+  box-shadow: 0 4px 0 #065f46;
+}
+.btn-primary:active { box-shadow: 0 1px 0 #065f46; }
+
+.btn-big {
+  font-size: 1.4em;
+  padding: 18px 28px;
+  border-radius: 22px;
+}
+
+.btn-huge {
+  background: #ef4444;
+  color: white;
+  border-color: #7f1d1d;
+  box-shadow: 0 6px 0 #7f1d1d;
+  font-size: 2em;
+  padding: 24px 36px;
+  border-radius: 28px;
+  width: 100%;
+  margin-bottom: 14px;
+}
+.btn-huge:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #7f1d1d;
+}
+
+.btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.btn-ghost {
+  background: white;
+  color: #78350f;
+}
+
+#answer-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+#answer {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  font-size: 1.8em;
+  padding: 14px 18px;
+  border: 4px solid #78350f;
+  border-radius: 18px;
+  background: #fffbeb;
+  color: #78350f;
+  text-align: center;
+  outline: none;
+  letter-spacing: 2px;
+}
+
+#answer:focus {
+  background: #fef3c7;
+  box-shadow: 0 0 0 4px #fbbf24;
+}
+
+#feedback {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 1.3em;
+  font-weight: bold;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#feedback.correct {
+  background: #d1fae5;
+  color: #065f46;
+  border: 3px solid #10b981;
+  animation: pop 0.4s;
+}
+
+#feedback.wrong {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 3px solid #ef4444;
+  animation: shake 0.4s;
+}
+
+#feedback.empty { display: none; }
+
+@keyframes pop {
+  0% { transform: scale(0.7); }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.correct-word {
+  font-size: 1.4em;
+  letter-spacing: 4px;
+  background: white;
+  padding: 4px 14px;
+  border-radius: 10px;
+  margin-top: 4px;
+}
+
+.round-info {
+  text-align: center;
+  font-size: 1.1em;
+  color: #78350f;
+  margin-bottom: 12px;
+  font-weight: bold;
+}
+
+.progress {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fef3c7;
+  border: 2px solid #78350f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8em;
+}
+.dot.right { background: #34d399; color: white; }
+.dot.wrong { background: #ef4444; color: white; }
+.dot.current { box-shadow: 0 0 0 3px #f59e0b; }
+
+#game-screen, #end-screen, #stats-screen, #level-screen, #welcome-screen, #leaderboard-screen { display: none; }
+.screen-active { display: block !important; }
+
+.welcome-age-input {
+  font-size: 3em;
+  padding: 12px;
+  text-align: center;
+  width: 140px;
+  display: block;
+  margin: 0 auto 20px;
+  border: 4px solid #78350f;
+  border-radius: 18px;
+  background: #fffbeb;
+  color: #78350f;
+  font-family: inherit;
+  font-weight: bold;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.welcome-name-input {
+  font-size: 1.6em;
+  padding: 10px 14px;
+  text-align: center;
+  width: 100%;
+  max-width: 280px;
+  display: block;
+  margin: 0 auto 18px;
+  border: 4px solid #78350f;
+  border-radius: 18px;
+  background: #fffbeb;
+  color: #78350f;
+  font-family: inherit;
+  font-weight: bold;
+  outline: none;
+}
+.welcome-age-input::-webkit-outer-spin-button,
+.welcome-age-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+.setting-input {
+  font-family: inherit;
+  font-size: 0.95em;
+  padding: 8px 12px;
+  border: 3px solid #78350f;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #78350f;
+  width: 100%;
+  margin-top: 6px;
+  outline: none;
+}
+
+.setting-help {
+  font-size: 0.85em;
+  color: #78350f;
+  opacity: 0.75;
+  margin: 4px 0 8px;
+}
+
+.setting-help a { color: #78350f; }
+
+.parent-section {
+  margin-top: 18px;
+  padding: 12px;
+  background: #fef3c7;
+  border: 2px dashed #78350f;
+  border-radius: 14px;
+}
+
+.leaderboard-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px dashed #fbbf24;
+}
+.leaderboard-tab {
+  background: #fef3c7;
+  border: 2px solid #78350f;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-weight: bold;
+  color: #78350f;
+  cursor: pointer;
+  font-size: 0.95em;
+}
+.leaderboard-tab.active {
+  background: #f59e0b;
+  color: white;
+}
+
+h2 {
+  color: #78350f;
+  margin-bottom: 12px;
+  font-size: 1.4em;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 4px;
+  border-bottom: 2px dashed #fbbf24;
+  font-size: 1.05em;
+}
+.stat-row:last-child { border-bottom: none; }
+
+.word-list {
+  max-height: 280px;
+  overflow-y: auto;
+  background: #fffbeb;
+  border: 2px solid #fbbf24;
+  border-radius: 12px;
+  padding: 8px;
+  margin-top: 8px;
+}
+
+.word-chip {
+  display: inline-block;
+  background: white;
+  border: 2px solid #78350f;
+  border-radius: 999px;
+  padding: 4px 12px;
+  margin: 3px;
+  font-size: 0.95em;
+  color: #78350f;
+}
+.word-chip .count {
+  background: #78350f;
+  color: white;
+  border-radius: 999px;
+  padding: 0 6px;
+  margin-left: 4px;
+  font-size: 0.85em;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.level-btn {
+  background: white;
+  border: 3px solid #78350f;
+  border-radius: 14px;
+  padding: 14px;
+  color: #78350f;
+  font-weight: bold;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.95em;
+  box-shadow: 0 3px 0 #78350f;
+}
+.level-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #78350f;
+}
+.level-btn.locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.level-btn.current {
+  background: #fef3c7;
+  box-shadow: 0 3px 0 #78350f, 0 0 0 3px #f59e0b;
+}
+.level-num {
+  font-size: 1.6em;
+  display: block;
+}
+
+.celebrate {
+  font-size: 2.5em;
+  text-align: center;
+  margin: 10px 0;
+}
+
+.score-big {
+  text-align: center;
+  font-size: 3em;
+  color: #065f46;
+  font-weight: bold;
+  margin: 12px 0;
+}
+
+footer {
+  text-align: center;
+  color: #78350f;
+  font-size: 0.85em;
+  opacity: 0.7;
+  padding: 8px;
+}
+
+.hidden { display: none !important; }
+
+select {
+  font-family: inherit;
+  font-size: 1em;
+  padding: 6px 10px;
+  border: 3px solid #78350f;
+  border-radius: 12px;
+  background: white;
+  color: #78350f;
+  font-weight: bold;
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 1.3em; }
+  .btn-huge { font-size: 1.5em; padding: 18px; }
+  #answer { font-size: 1.5em; }
+  .card { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="card">
+    <h1><span class="bee">🐝</span> Spelling Bee</h1>
+    <div class="tag-row">
+      <span class="tag" id="level-tag">Level 1</span>
+      <button class="btn btn-ghost" id="menu-btn">☰ Menu</button>
+    </div>
+  </header>
+
+  <!-- WELCOME SCREEN -->
+  <section class="card" id="welcome-screen">
+    <div class="celebrate">🐝</div>
+    <h2 style="text-align:center;">G'day! Let's spell.</h2>
+    <p style="text-align:center; margin-bottom:8px;">What's your name?</p>
+    <input id="name-input"
+           class="welcome-name-input"
+           type="text"
+           placeholder="Your name"
+           maxlength="20"
+           autocomplete="off"
+           autocapitalize="words">
+    <p style="text-align:center; margin-bottom:8px;">How old are you?</p>
+    <input id="age-input"
+           class="welcome-age-input"
+           type="number"
+           min="7" max="16"
+           value="7"
+           inputmode="numeric">
+    <button class="btn btn-primary btn-big" id="start-from-welcome" style="width:100%;">Let's go! 🐝</button>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <main class="card" id="game-screen">
+    <div class="round-info" id="round-info">Word 1 of 10</div>
+    <div class="progress" id="progress"></div>
+
+    <button class="btn-huge" id="play-btn">🔊 Say the word</button>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="slower-btn">🐢 Slower</button>
+      <button class="btn btn-ghost" id="sentence-btn">💬 In a sentence</button>
+    </div>
+
+    <form id="answer-form" autocomplete="off">
+      <input id="answer"
+             type="text"
+             autocomplete="off"
+             autocorrect="off"
+             autocapitalize="off"
+             spellcheck="false"
+             placeholder="type here..."
+             aria-label="Type the word">
+      <button class="btn btn-primary btn-big" type="submit">Check ✓</button>
+    </form>
+
+    <div id="feedback" class="empty"></div>
+  </main>
+
+  <!-- END OF ROUND -->
+  <section class="card" id="end-screen">
+    <div class="celebrate" id="celebrate-emoji">🎉</div>
+    <h2 id="end-title">Round done!</h2>
+    <div class="score-big" id="end-score">8 / 10</div>
+    <p id="end-message" style="text-align:center; margin-bottom:14px;"></p>
+    <button class="btn btn-primary btn-big" id="next-round-btn" style="width:100%;">Play again ▶</button>
+    <button class="btn btn-ghost" id="level-up-btn" style="width:100%; margin-top:8px; display:none;">⬆ Move up to next level</button>
+    <button class="btn btn-ghost" id="see-leaderboard-btn" style="width:100%; margin-top:8px;">🏆 Leaderboard</button>
+    <button class="btn btn-ghost" id="see-stats-btn" style="width:100%; margin-top:8px;">📊 See my stats</button>
+  </section>
+
+  <!-- STATS SCREEN -->
+  <section class="card" id="stats-screen">
+    <h2>📊 Your Stats</h2>
+    <div class="stat-row"><span>Total words tried</span><strong id="stat-total">0</strong></div>
+    <div class="stat-row"><span>Got right</span><strong id="stat-right">0</strong></div>
+    <div class="stat-row"><span>Got wrong</span><strong id="stat-wrong">0</strong></div>
+    <div class="stat-row"><span>Accuracy</span><strong id="stat-accuracy">0%</strong></div>
+    <div class="stat-row"><span>Highest level reached</span><strong id="stat-level">1</strong></div>
+
+    <h2 style="margin-top:18px;">⭐ Words I know well</h2>
+    <div class="word-list" id="mastered-list"><em>None yet — keep going!</em></div>
+
+    <h2 style="margin-top:18px;">📝 Words to practise</h2>
+    <div class="word-list" id="tricky-list"><em>No tricky words yet!</em></div>
+
+    <button class="btn btn-primary" id="back-from-stats" style="width:100%; margin-top:16px;">Back to game</button>
+    <button class="btn btn-ghost" id="reset-btn" style="width:100%; margin-top:8px; background:#fee2e2;">🗑 Reset all progress</button>
+  </section>
+
+  <!-- LEADERBOARD SCREEN -->
+  <section class="card" id="leaderboard-screen">
+    <h2>🏆 Leaderboard</h2>
+    <p class="setting-help" style="margin-bottom:10px;">Best scores per age group on this device.</p>
+    <div id="leaderboard-content"></div>
+    <button class="btn btn-primary" id="back-from-leaderboard" style="width:100%; margin-top:16px;">Back to game</button>
+  </section>
+
+  <!-- LEVEL PICKER -->
+  <section class="card" id="level-screen">
+    <div class="parent-section" style="margin-top:0; background:#d1fae5; border-color:#065f46;">
+      <h2 style="margin-top:0;">👤 Player</h2>
+      <div class="stat-row" style="border:none; padding:6px 0;">
+        <span><strong id="current-player">—</strong></span>
+        <button class="btn btn-ghost" id="switch-player-btn" style="padding:6px 14px; font-size:0.9em;">Switch player</button>
+      </div>
+      <button class="btn btn-primary" id="open-leaderboard-btn" style="width:100%; margin-top:8px;">🏆 Leaderboard</button>
+    </div>
+
+    <!-- Competition word list (e.g. NSW Spelling Bee) — appears when imported -->
+    <div class="parent-section" id="wordlist-section" style="margin-top:0; background:#fde68a; border-color:#78350f;">
+      <h2 style="margin-top:0;">📋 Word list</h2>
+      <div class="stat-row" style="border:none; padding:6px 0;">
+        <span id="active-list-label"><strong>Standard</strong> (by age)</span>
+        <span style="display:flex; gap:6px;">
+          <button class="btn btn-ghost" id="paste-list-btn" style="padding:6px 12px; font-size:0.85em;">Paste list</button>
+          <button class="btn btn-ghost" id="import-list-btn" style="padding:6px 12px; font-size:0.85em;">Import file</button>
+        </span>
+      </div>
+      <input type="file" id="import-file" accept="application/json,.json,text/plain" style="display:none;">
+
+      <!-- Paste-to-load: no file picker needed, works on any device -->
+      <div id="paste-box" style="display:none; margin:6px 0;">
+        <p class="setting-help" style="margin:4px 0;">Paste the word list below. Accepts the JSON file's contents, OR plain text with <code>Level 2</code> / <code>Level 3</code> … headings and words separated by spaces, commas or new lines.</p>
+        <textarea id="paste-area" rows="6" style="width:100%; font-family:inherit; font-size:0.9em; padding:8px; border:3px solid #78350f; border-radius:10px; background:#fffbeb; color:#78350f; resize:vertical;" placeholder="Paste here…"></textarea>
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <button class="btn btn-primary" id="load-paste-btn" style="flex:1; font-size:0.9em;">Load words</button>
+          <button class="btn btn-ghost" id="cancel-paste-btn" style="font-size:0.9em;">Cancel</button>
+        </div>
+      </div>
+
+      <div id="psb-levels" style="display:none;">
+        <p class="setting-help" style="margin:6px 0;">🐝 Tap a competition level:</p>
+        <div class="level-grid" id="psb-level-grid"></div>
+        <button class="btn btn-ghost" id="use-standard-btn" style="width:100%; margin-top:8px; font-size:0.85em;">↩ Switch back to standard (by age)</button>
+        <button class="btn btn-ghost" id="remove-list-btn" style="width:100%; margin-top:6px; font-size:0.8em; background:#fee2e2;">🗑 Remove imported list</button>
+      </div>
+      <p class="setting-help" id="import-feedback" style="margin-top:6px; min-height:1em;"></p>
+    </div>
+
+    <h2>🎚 Choose a level</h2>
+    <p style="margin-bottom:8px;">Levels unlock as you get 8 out of 10 right.</p>
+    <div class="level-grid" id="level-grid"></div>
+
+    <h2 style="margin-top:14px;">⚙ Settings</h2>
+    <div class="stat-row">
+      <span>Age</span>
+      <input id="age-setting" type="number" min="7" max="16"
+             style="width:80px; font-family:inherit; font-size:1em; padding:6px 10px; border:3px solid #78350f; border-radius:12px; background:white; color:#78350f; font-weight:bold; text-align:center;">
+    </div>
+    <div class="stat-row">
+      <span>Speed</span>
+      <select id="rate-select">
+        <option value="0.7">Slow</option>
+        <option value="0.85" selected>Normal</option>
+        <option value="1">Fast</option>
+      </select>
+    </div>
+
+    <div class="stat-row">
+      <span><strong>🎙 Use AI voice</strong></span>
+      <label style="display:inline-flex; align-items:center; gap:8px; font-weight:bold;">
+        <input type="checkbox" id="use-ai" style="width:22px; height:22px; accent-color:#78350f;">
+        <span id="ai-status">Off</span>
+      </label>
+    </div>
+
+    <!-- AI voice dropdown — visible only when "Use AI voice" is on -->
+    <div class="stat-row" id="ai-voice-row">
+      <span>Voice</span>
+      <select id="voice-id" style="max-width: 60%;"></select>
+    </div>
+
+    <!-- Browser-voice dropdown — visible only when "Use AI voice" is off -->
+    <div class="stat-row" id="browser-voice-row">
+      <span>Voice</span>
+      <select id="voice-select"></select>
+    </div>
+
+    <button class="btn btn-primary" id="test-voice" style="width:100%; margin-top:10px;">🔊 Test voice</button>
+    <p class="setting-help" id="ai-feedback" style="margin-top:8px; min-height:1em;"></p>
+    <p class="setting-help" style="opacity:0.75; margin-top:4px;">
+      AI voice uses <a href="https://aistudio.google.com" target="_blank" rel="noopener">Gemini Achernar</a>
+      (Australian female). On any AI error the app falls back to your device voice so the kid never gets silence.
+    </p>
+
+    <button class="btn btn-primary" id="back-from-level" style="width:100%; margin-top:16px;">Back to game</button>
+  </section>
+
+  <footer>Made for Leo 🐝 · <span id="version-stamp"></span></footer>
+</div>
+
+<script>
+// ============================================================
+// WORD LISTS — by level
+// ============================================================
+// Generic difficulty labels — every age now plays all 10 levels.
+// Level 1 = easiest words for that age, Level 10 = stretch words.
+const LEVEL_NAMES = [
+  "Warm up", "Easy", "Comfortable", "Steady", "Standard",
+  "Tricky", "Challenging", "Hard", "Expert", "Master"
+];
+
+// Master word pool, keyed by absolute spelling age (5-17).
+// Sources: Schonell graded word spelling test, Australian curriculum word lists
+// (Years 2–11), Dolch sight words, Scripps spelling bee material.
+//
+// The pool for a given (playerAge, level) is computed by taking words whose
+// spelling age sits in a band around (playerAge - 2 + level * 6/9). This means
+// the same word naturally appears as a "hard" word for a younger player and an
+// "easy" word for an older one — exactly the overlap requested.
+const MASTER_WORDS = {
+  5: [
+    { word: "cat",  sentence: "The cat sat on the mat." },
+    { word: "hat",  sentence: "I wear a hat to school." },
+    { word: "mat",  sentence: "Wipe your feet on the mat." },
+    { word: "bat",  sentence: "The bat flew at night." },
+    { word: "sat",  sentence: "We sat together at lunch." },
+    { word: "mad",  sentence: "Don't get mad at me." },
+    { word: "sad",  sentence: "She looked a little sad." },
+    { word: "dad",  sentence: "My dad makes great pancakes." },
+    { word: "bed",  sentence: "Time to go to bed." },
+    { word: "red",  sentence: "Apples can be red." },
+    { word: "fed",  sentence: "I fed the dog." },
+    { word: "leg",  sentence: "I hurt my leg." },
+    { word: "big",  sentence: "It is a very big tree." },
+    { word: "dig",  sentence: "Dig a deep hole." },
+    { word: "pig",  sentence: "The pig went oink." },
+    { word: "dog",  sentence: "My dog is friendly." },
+    { word: "log",  sentence: "Sit on the log." },
+    { word: "hop",  sentence: "Frogs hop high." },
+    { word: "top",  sentence: "Spin the top fast." },
+    { word: "mop",  sentence: "Mop the kitchen floor." },
+    { word: "cup",  sentence: "Drink from your cup." },
+    { word: "sun",  sentence: "The sun is shining." },
+    { word: "fun",  sentence: "We had so much fun." },
+    { word: "run",  sentence: "I can run very fast." },
+    { word: "nut",  sentence: "Crack open the nut." },
+    { word: "ten",  sentence: "I can count to ten." },
+    { word: "pen",  sentence: "Write with a blue pen." }
+  ],
+  6: [
+    { word: "jump",  sentence: "Frogs jump high in the pond." },
+    { word: "ship",  sentence: "The ship sails on the sea." },
+    { word: "fish",  sentence: "The fish swims fast." },
+    { word: "plant", sentence: "Water the plant every day." },
+    { word: "swim",  sentence: "I can swim well." },
+    { word: "milk",  sentence: "Pour the milk in my cup." },
+    { word: "sand",  sentence: "I build castles in the sand." },
+    { word: "park",  sentence: "We play at the park." },
+    { word: "that",  sentence: "That is my book." },
+    { word: "with",  sentence: "Come with me." },
+    { word: "when",  sentence: "When is dinner?" },
+    { word: "what",  sentence: "What is your name?" },
+    { word: "said",  sentence: "She said hello to me." },
+    { word: "were",  sentence: "We were happy." },
+    { word: "they",  sentence: "They are my friends." },
+    { word: "look",  sentence: "Look at the rainbow." },
+    { word: "make",  sentence: "Let's make a cake." },
+    { word: "came",  sentence: "Mum came home early." },
+    { word: "like",  sentence: "I like ice cream." },
+    { word: "time",  sentence: "What time is it?" },
+    { word: "home",  sentence: "I am going home now." },
+    { word: "play",  sentence: "Let's play in the park." },
+    { word: "read",  sentence: "I can read a book." },
+    { word: "tree",  sentence: "Climb the tall tree." },
+    { word: "blue",  sentence: "The sky is blue today." },
+    { word: "cake",  sentence: "It is my birthday cake." },
+    { word: "fast",  sentence: "He can run very fast." },
+    { word: "cold",  sentence: "Ice is very cold." },
+    { word: "find",  sentence: "Find the hidden toy." },
+    { word: "good",  sentence: "Have a good day." },
+    { word: "then",  sentence: "First we eat, then we play." },
+    { word: "this",  sentence: "This is my pencil." },
+    { word: "chip",  sentence: "Pass me one chip." },
+    { word: "shop",  sentence: "We went to the shop." },
+    { word: "hand",  sentence: "Wash your hand first." }
+  ],
+  7: [
+    { word: "smile",   sentence: "She has a big smile." },
+    { word: "paint",   sentence: "I paint a picture." },
+    { word: "sleep",   sentence: "It is time to sleep." },
+    { word: "dream",   sentence: "I had a happy dream." },
+    { word: "happy",   sentence: "I feel very happy." },
+    { word: "rabbit",  sentence: "The rabbit hopped away." },
+    { word: "garden",  sentence: "Flowers grow in the garden." },
+    { word: "pretty",  sentence: "What a pretty flower." },
+    { word: "hello",   sentence: "Say hello to your friend." },
+    { word: "lemon",   sentence: "A lemon tastes sour." },
+    { word: "light",   sentence: "Turn on the light." },
+    { word: "night",   sentence: "Stars shine at night." },
+    { word: "right",   sentence: "You are right about it." },
+    { word: "found",   sentence: "I found my missing book." },
+    { word: "sound",   sentence: "What is that sound?" },
+    { word: "around",  sentence: "Look around the room." },
+    { word: "brown",   sentence: "The bear has brown fur." },
+    { word: "sister",  sentence: "My sister is kind." },
+    { word: "water",   sentence: "Please pour the water." },
+    { word: "after",   sentence: "After dinner we play." },
+    { word: "before",  sentence: "Brush your teeth before bed." },
+    { word: "again",   sentence: "Please try again." },
+    { word: "every",   sentence: "I read every day." },
+    { word: "white",   sentence: "Snow is white." },
+    { word: "about",   sentence: "Tell me about your day." },
+    { word: "kitten",  sentence: "The kitten chased the yarn." },
+    { word: "monkey",  sentence: "The monkey climbed the tree." },
+    { word: "dragon",  sentence: "The dragon breathes fire." },
+    { word: "summer",  sentence: "We swim in summer." },
+    { word: "winter",  sentence: "It snows in winter." },
+    { word: "story",   sentence: "Read me a story." },
+    { word: "queen",   sentence: "The queen wore a crown." },
+    { word: "party",   sentence: "We had a birthday party." },
+    { word: "answer",  sentence: "Give me your answer." },
+    { word: "quickly", sentence: "Run quickly to the door." }
+  ],
+  8: [
+    { word: "friend",    sentence: "My best friend is funny." },
+    { word: "school",    sentence: "I walk to school." },
+    { word: "because",   sentence: "I am tired because I ran far." },
+    { word: "family",    sentence: "I love my family." },
+    { word: "people",    sentence: "Many people came to the show." },
+    { word: "would",     sentence: "I would like a snack." },
+    { word: "could",     sentence: "Could you help me?" },
+    { word: "should",    sentence: "We should be kind." },
+    { word: "where",     sentence: "Where is my bag?" },
+    { word: "there",     sentence: "Put it over there." },
+    { word: "their",     sentence: "That is their house." },
+    { word: "between",   sentence: "Sit between us." },
+    { word: "morning",   sentence: "Good morning, sunshine." },
+    { word: "thought",   sentence: "I thought about it carefully." },
+    { word: "through",   sentence: "Walk through the door." },
+    { word: "enough",    sentence: "I have had enough." },
+    { word: "myself",    sentence: "I did it all by myself." },
+    { word: "surprise",  sentence: "What a lovely surprise." },
+    { word: "beautiful", sentence: "What a beautiful day." },
+    { word: "favourite", sentence: "Blue is my favourite colour." },
+    { word: "jumping",   sentence: "The dog kept jumping up." },
+    { word: "walked",    sentence: "We walked home together." },
+    { word: "climbed",   sentence: "She climbed the steep hill." },
+    { word: "careful",   sentence: "Be careful with the glass." },
+    { word: "kindness",  sentence: "Show kindness to everyone." },
+    { word: "sleeping",  sentence: "The baby is sleeping." },
+    { word: "exciting",  sentence: "What an exciting day!" },
+    { word: "painted",   sentence: "She painted the wall blue." },
+    { word: "listened",  sentence: "I listened carefully." },
+    { word: "another",   sentence: "Can I have another one?" },
+    { word: "wonderful", sentence: "A wonderful surprise." },
+    { word: "learning",  sentence: "She is learning to swim." },
+    { word: "honest",    sentence: "Be honest with me." },
+    { word: "island",    sentence: "We visited a tropical island." },
+    { word: "famous",    sentence: "He is a famous singer." }
+  ],
+  9: [
+    { word: "knife",       sentence: "Cut the bread with a knife." },
+    { word: "knight",      sentence: "A brave knight rode the horse." },
+    { word: "knock",       sentence: "Knock on the door first." },
+    { word: "lamb",        sentence: "A baby sheep is called a lamb." },
+    { word: "climb",       sentence: "I love to climb trees." },
+    { word: "ghost",       sentence: "The ghost story scared me." },
+    { word: "weight",      sentence: "Check the weight of the bag." },
+    { word: "eight",       sentence: "I am eight years old." },
+    { word: "height",      sentence: "Measure my height please." },
+    { word: "neighbour",   sentence: "Our neighbour is friendly." },
+    { word: "write",       sentence: "Write your name on the page." },
+    { word: "wrong",       sentence: "That answer is wrong." },
+    { word: "listen",      sentence: "Please listen carefully." },
+    { word: "often",       sentence: "I often visit my grandma." },
+    { word: "autumn",      sentence: "Leaves fall in autumn." },
+    { word: "ancient",     sentence: "An ancient castle stood there." },
+    { word: "science",     sentence: "Science is my favourite subject." },
+    { word: "naturally",   sentence: "Hair grows naturally." },
+    { word: "especially",  sentence: "I love fruit, especially mangoes." },
+    { word: "separate",    sentence: "Separate the colours please." },
+    { word: "calendar",    sentence: "Check the calendar for the date." },
+    { word: "library",     sentence: "Borrow books from the library." },
+    { word: "ordinary",    sentence: "It was an ordinary day." },
+    { word: "particular",  sentence: "I like this particular one." },
+    { word: "popular",     sentence: "That song is popular." },
+    { word: "regular",     sentence: "We meet on a regular basis." },
+    { word: "similar",     sentence: "These shapes are similar." },
+    { word: "several",     sentence: "Several friends came over." },
+    { word: "suddenly",    sentence: "It started to rain suddenly." },
+    { word: "definitely",  sentence: "I will definitely come." },
+    { word: "muscle",      sentence: "Flex your strong muscle." },
+    { word: "honest",      sentence: "Be honest about it." },
+    { word: "doubt",       sentence: "I have no doubt." },
+    { word: "rough",       sentence: "The road was rough." },
+    { word: "cough",       sentence: "He had a bad cough." }
+  ],
+  10: [
+    { word: "necessary",   sentence: "It is necessary to study." },
+    { word: "opposite",    sentence: "North is the opposite of south." },
+    { word: "occasion",    sentence: "A very special occasion." },
+    { word: "embarrass",   sentence: "Please don't embarrass me." },
+    { word: "address",     sentence: "Write your address here." },
+    { word: "balance",     sentence: "Keep your balance on the beam." },
+    { word: "recipe",      sentence: "Follow the recipe step by step." },
+    { word: "generous",    sentence: "She is a generous person." },
+    { word: "accident",    sentence: "It was just an accident." },
+    { word: "character",   sentence: "He has a kind character." },
+    { word: "recommend",   sentence: "I recommend this book." },
+    { word: "important",   sentence: "An important meeting today." },
+    { word: "government",  sentence: "The government made a new rule." },
+    { word: "environment", sentence: "We must protect the environment." },
+    { word: "equipment",   sentence: "Take all the sports equipment." },
+    { word: "opinion",     sentence: "Everyone has an opinion." },
+    { word: "sentence",    sentence: "Write a complete sentence." },
+    { word: "computer",    sentence: "Use the computer to type." },
+    { word: "document",    sentence: "Sign the document please." },
+    { word: "language",    sentence: "She speaks three languages." },
+    { word: "knowledge",   sentence: "Share your knowledge with others." },
+    { word: "courage",     sentence: "She showed great courage." },
+    { word: "century",     sentence: "We live in the 21st century." },
+    { word: "dictionary",  sentence: "Look it up in the dictionary." },
+    { word: "mystery",     sentence: "Solve the mystery together." },
+    { word: "treasure",    sentence: "Pirates buried treasure here." },
+    { word: "available",   sentence: "Tickets are still available." },
+    { word: "business",    sentence: "She runs her own business." },
+    { word: "decision",    sentence: "Make a wise decision." },
+    { word: "exercise",    sentence: "Daily exercise is healthy." },
+    { word: "medicine",    sentence: "Take your medicine." },
+    { word: "signature",   sentence: "Add your signature." },
+    { word: "challenge",   sentence: "Accept the challenge." },
+    { word: "promise",     sentence: "I promise to help." },
+    { word: "attention",   sentence: "Pay close attention." }
+  ],
+  11: [
+    { word: "parliament",   sentence: "Parliament passed the new law." },
+    { word: "vegetable",    sentence: "Eat your vegetables." },
+    { word: "conscience",   sentence: "Listen to your conscience." },
+    { word: "sincerely",    sentence: "I sincerely apologise." },
+    { word: "foreign",      sentence: "She visits a foreign country." },
+    { word: "restaurant",   sentence: "We ate at a new restaurant." },
+    { word: "ambulance",    sentence: "The ambulance arrived quickly." },
+    { word: "audience",     sentence: "The audience clapped loudly." },
+    { word: "schedule",     sentence: "Check the schedule today." },
+    { word: "scissors",     sentence: "Use the scissors carefully." },
+    { word: "vehicle",      sentence: "A red vehicle drove past." },
+    { word: "ceremony",     sentence: "The opening ceremony was grand." },
+    { word: "certificate",  sentence: "She received a certificate." },
+    { word: "conference",   sentence: "The conference starts at nine." },
+    { word: "continue",     sentence: "Please continue reading." },
+    { word: "criticise",    sentence: "Don't criticise unfairly." },
+    { word: "curiosity",    sentence: "Her curiosity led her on." },
+    { word: "descend",      sentence: "Descend the stairs slowly." },
+    { word: "develop",      sentence: "Develop your skills." },
+    { word: "disappear",    sentence: "The clouds will disappear." },
+    { word: "disappoint",   sentence: "I won't disappoint you." },
+    { word: "discipline",   sentence: "Self discipline matters." },
+    { word: "drought",      sentence: "A long drought hit the farm." },
+    { word: "enthusiastic", sentence: "She is enthusiastic about art." },
+    { word: "equipped",     sentence: "We are well equipped." },
+    { word: "exhibit",      sentence: "A new exhibit opens today." },
+    { word: "existence",    sentence: "Question its existence." },
+    { word: "familiar",     sentence: "A familiar face appeared." },
+    { word: "guarantee",    sentence: "I guarantee it will work." },
+    { word: "immediately",  sentence: "Come here immediately." },
+    { word: "obvious",      sentence: "It was obvious." },
+    { word: "genuine",      sentence: "A genuine smile." },
+    { word: "cousin",       sentence: "My older cousin visits." },
+    { word: "piece",        sentence: "A piece of cake." },
+    { word: "fierce",       sentence: "A fierce dragon roared." }
+  ],
+  12: [
+    { word: "rhythm",        sentence: "Feel the rhythm of the music." },
+    { word: "weird",         sentence: "What a weird coincidence." },
+    { word: "mischievous",   sentence: "A mischievous grin spread." },
+    { word: "embarrassed",   sentence: "She felt embarrassed." },
+    { word: "exaggerate",    sentence: "Don't exaggerate the story." },
+    { word: "accommodate",   sentence: "We can accommodate you." },
+    { word: "accomplish",    sentence: "Accomplish your goals." },
+    { word: "achievement",   sentence: "What a great achievement." },
+    { word: "acquaintance",  sentence: "He is an old acquaintance." },
+    { word: "advantage",     sentence: "Take the advantage." },
+    { word: "allegiance",    sentence: "Pledge your allegiance." },
+    { word: "amateur",       sentence: "She is an amateur photographer." },
+    { word: "analyse",       sentence: "Analyse the results carefully." },
+    { word: "apparent",      sentence: "The answer was apparent." },
+    { word: "appearance",    sentence: "He made a brief appearance." },
+    { word: "appreciate",    sentence: "I appreciate your help." },
+    { word: "argument",      sentence: "Avoid a pointless argument." },
+    { word: "assistance",    sentence: "Do you need assistance?" },
+    { word: "atmosphere",    sentence: "A friendly atmosphere filled the room." },
+    { word: "attendance",    sentence: "Daily attendance is required." },
+    { word: "autobiography", sentence: "Read her autobiography." },
+    { word: "behaviour",     sentence: "Excellent behaviour today." },
+    { word: "beneath",       sentence: "It was hidden beneath the rug." },
+    { word: "bicycle",       sentence: "I ride my bicycle to school." },
+    { word: "bouquet",       sentence: "He gave her a bouquet." },
+    { word: "brilliant",     sentence: "What a brilliant idea." },
+    { word: "broccoli",      sentence: "I love steamed broccoli." },
+    { word: "cathedral",     sentence: "The cathedral is ancient." },
+    { word: "cemetery",      sentence: "We visited the cemetery." },
+    { word: "believe",       sentence: "I believe in you." },
+    { word: "receive",       sentence: "She will receive the gift." },
+    { word: "seize",         sentence: "Seize the day." },
+    { word: "ceiling",       sentence: "Paint the ceiling white." },
+    { word: "shield",        sentence: "Hold up your shield." }
+  ],
+  13: [
+    { word: "hierarchy",      sentence: "A strict hierarchy ruled the army." },
+    { word: "miscellaneous",  sentence: "A box of miscellaneous items." },
+    { word: "conscientious",  sentence: "She is a conscientious worker." },
+    { word: "perseverance",   sentence: "Perseverance leads to success." },
+    { word: "prejudice",      sentence: "We must reject prejudice." },
+    { word: "simultaneously", sentence: "It all happened simultaneously." },
+    { word: "supersede",      sentence: "New rules supersede the old." },
+    { word: "liaison",        sentence: "He acts as a liaison." },
+    { word: "leisure",        sentence: "Enjoy your leisure time." },
+    { word: "mortgage",       sentence: "They paid off the mortgage." },
+    { word: "mysterious",     sentence: "A mysterious figure waited." },
+    { word: "niece",          sentence: "My niece is turning seven." },
+    { word: "occurred",       sentence: "What occurred yesterday?" },
+    { word: "occurrence",     sentence: "It is a rare occurrence." },
+    { word: "omitted",        sentence: "He omitted one detail." },
+    { word: "opportunity",    sentence: "A golden opportunity arose." },
+    { word: "parallel",       sentence: "Draw two parallel lines." },
+    { word: "paralyse",       sentence: "Fear can paralyse a person." },
+    { word: "pastime",        sentence: "Reading is my favourite pastime." },
+    { word: "perceive",       sentence: "How do you perceive this?" },
+    { word: "persistent",     sentence: "The persistent rain continued." },
+    { word: "persuade",       sentence: "I tried to persuade him." },
+    { word: "phenomenon",     sentence: "It is a natural phenomenon." },
+    { word: "philosophy",     sentence: "She studies philosophy." },
+    { word: "physician",      sentence: "Ask your physician." },
+    { word: "picturesque",    sentence: "A picturesque village." },
+    { word: "possession",     sentence: "A prized possession." },
+    { word: "privilege",      sentence: "It is a great privilege." },
+    { word: "pronunciation",  sentence: "Practice your pronunciation." },
+    { word: "questionnaire",  sentence: "Fill out the questionnaire." },
+    { word: "millionaire",    sentence: "He became a millionaire." },
+    { word: "fluorescent",    sentence: "Fluorescent lights buzzed." },
+    { word: "forfeit",        sentence: "They had to forfeit the match." },
+    { word: "exhilarating",   sentence: "An exhilarating ride." }
+  ],
+  14: [
+    { word: "bureaucracy",   sentence: "Government bureaucracy is slow." },
+    { word: "entrepreneur",  sentence: "She is a young entrepreneur." },
+    { word: "surveillance",  sentence: "Under constant surveillance." },
+    { word: "paraphernalia", sentence: "He brought all his paraphernalia." },
+    { word: "idiosyncrasy",  sentence: "An interesting idiosyncrasy." },
+    { word: "onomatopoeia",  sentence: "Buzz is an example of onomatopoeia." },
+    { word: "magnanimous",   sentence: "A magnanimous gesture." },
+    { word: "ostentatious",  sentence: "An ostentatious display of wealth." },
+    { word: "ubiquitous",    sentence: "Phones are now ubiquitous." },
+    { word: "perspicacious", sentence: "A perspicacious observation." },
+    { word: "gregarious",    sentence: "He is naturally gregarious." },
+    { word: "surreptitious", sentence: "A surreptitious glance." },
+    { word: "paraphrase",    sentence: "Paraphrase the long sentence." },
+    { word: "perpendicular", sentence: "Two perpendicular lines meet." },
+    { word: "pharmaceutical",sentence: "Pharmaceutical research is costly." },
+    { word: "presumptuous",  sentence: "It seems presumptuous to ask." },
+    { word: "pseudonym",     sentence: "She writes under a pseudonym." },
+    { word: "psychiatrist",  sentence: "He visits a psychiatrist." },
+    { word: "psychology",    sentence: "She studies psychology." },
+    { word: "reconnaissance",sentence: "A reconnaissance mission was planned." },
+    { word: "reminiscence",  sentence: "Fond reminiscences of childhood." },
+    { word: "rendezvous",    sentence: "Meet at the agreed rendezvous." },
+    { word: "reservoir",     sentence: "The reservoir is nearly full." },
+    { word: "restaurateur",  sentence: "A celebrated restaurateur." },
+    { word: "rhetorical",    sentence: "It was a rhetorical question." },
+    { word: "silhouette",    sentence: "Her silhouette appeared in the doorway." },
+    { word: "sophisticated", sentence: "A sophisticated solution." },
+    { word: "synonymous",    sentence: "Their names are synonymous with talent." },
+    { word: "tournament",    sentence: "She won the tournament." },
+    { word: "vacuum",        sentence: "Use the vacuum to clean the rug." },
+    { word: "paradigm",      sentence: "A new paradigm in science." },
+    { word: "nausea",        sentence: "A wave of nausea hit her." },
+    { word: "pneumatic",     sentence: "A pneumatic drill is loud." },
+    { word: "xylophone",     sentence: "Play the xylophone gently." }
+  ],
+  15: [
+    { word: "acquiesce",      sentence: "I acquiesce to your demand." },
+    { word: "anachronism",    sentence: "A horse in the city is an anachronism." },
+    { word: "antediluvian",   sentence: "Antediluvian customs persisted." },
+    { word: "bourgeois",      sentence: "Bourgeois values shaped the era." },
+    { word: "chiaroscuro",    sentence: "The painting uses bold chiaroscuro." },
+    { word: "connoisseur",    sentence: "She is a wine connoisseur." },
+    { word: "consensus",      sentence: "The team reached a consensus." },
+    { word: "defenestration", sentence: "Defenestration means throwing something out a window." },
+    { word: "ennui",          sentence: "Long summers can bring on ennui." },
+    { word: "ethereal",       sentence: "Her voice had an ethereal quality." },
+    { word: "inchoate",       sentence: "An inchoate plan took shape." },
+    { word: "juxtaposition",  sentence: "A striking juxtaposition of styles." },
+    { word: "kaleidoscope",   sentence: "Look through the kaleidoscope." },
+    { word: "lackadaisical",  sentence: "A lackadaisical attitude annoyed the coach." },
+    { word: "malfeasance",    sentence: "He was charged with malfeasance." },
+    { word: "mellifluous",    sentence: "Her mellifluous voice soothed everyone." },
+    { word: "nonchalant",     sentence: "He gave a nonchalant shrug." },
+    { word: "obfuscate",      sentence: "Don't obfuscate the issue." },
+    { word: "omniscient",     sentence: "The novel uses an omniscient narrator." },
+    { word: "peripatetic",    sentence: "She lived a peripatetic life." },
+    { word: "quintessential", sentence: "The quintessential summer day." },
+    { word: "soliloquy",      sentence: "Hamlet's famous soliloquy." },
+    { word: "supercilious",   sentence: "A supercilious smirk crossed his face." },
+    { word: "vicissitude",    sentence: "The vicissitudes of life." },
+    { word: "magnanimity",    sentence: "She showed great magnanimity." },
+    { word: "perspicacity",   sentence: "His perspicacity solved the case." },
+    { word: "recalcitrant",   sentence: "A recalcitrant student tested patience." },
+    { word: "sycophant",      sentence: "The king was surrounded by sycophants." },
+    { word: "archaeology",    sentence: "She studies archaeology." },
+    { word: "intricate",      sentence: "An intricate pattern." }
+  ],
+  16: [
+    { word: "sesquipedalian", sentence: "His sesquipedalian style impressed no one." },
+    { word: "somnambulist",   sentence: "The somnambulist walked through the hall." },
+    { word: "lugubrious",     sentence: "A lugubrious tone filled the room." },
+    { word: "obsequious",     sentence: "An obsequious greeting irritated him." },
+    { word: "propinquity",    sentence: "Their propinquity made them close." },
+    { word: "pertinacious",   sentence: "Pertinacious effort wins the day." },
+    { word: "equanimity",     sentence: "She faced the news with equanimity." },
+    { word: "salubrious",     sentence: "A salubrious mountain climate." },
+    { word: "vituperative",   sentence: "His vituperative remarks shocked all." },
+    { word: "anthropomorphic",sentence: "Anthropomorphic animals fill the book." },
+    { word: "ostracise",      sentence: "Don't ostracise the new student." },
+    { word: "pernicious",     sentence: "A pernicious rumour spread." },
+    { word: "tintinnabulation", sentence: "The tintinnabulation of distant bells." },
+    { word: "ephemeral",      sentence: "An ephemeral moment of joy." },
+    { word: "juxtapose",      sentence: "Juxtapose the two photographs." },
+    { word: "obstreperous",   sentence: "An obstreperous crowd gathered." },
+    { word: "melancholy",     sentence: "A melancholy mood lingered." },
+    { word: "clandestine",    sentence: "A clandestine meeting at dawn." },
+    { word: "inconceivable",  sentence: "An inconceivable idea." },
+    { word: "unprecedented",  sentence: "Unprecedented growth this year." },
+    { word: "catastrophic",   sentence: "Catastrophic flooding hit the town." },
+    { word: "proselytize",    sentence: "They proselytize new ideas." },
+    { word: "acquiescence",   sentence: "Her acquiescence was reluctant." },
+    { word: "magnificent",    sentence: "A magnificent palace." },
+    { word: "surreptitiously",sentence: "She entered surreptitiously." }
+  ],
+  17: [
+    { word: "circumlocution",     sentence: "Avoid circumlocution in your essay." },
+    { word: "quintessence",       sentence: "The quintessence of elegance." },
+    { word: "perspicuity",        sentence: "Speak with perspicuity." },
+    { word: "ineluctable",        sentence: "An ineluctable conclusion." },
+    { word: "perfidious",         sentence: "A perfidious double-agent." },
+    { word: "unctuous",           sentence: "His unctuous smile fooled no one." },
+    { word: "acquiescent",        sentence: "An acquiescent nod sealed it." },
+    { word: "presciently",        sentence: "She predicted this presciently." },
+    { word: "extemporaneously",   sentence: "Speak extemporaneously, not from notes." },
+    { word: "preponderance",      sentence: "A preponderance of evidence." },
+    { word: "heterogeneous",      sentence: "A heterogeneous mixture of cultures." },
+    { word: "machination",        sentence: "Political machinations everywhere." },
+    { word: "cognizant",          sentence: "Be cognizant of the rules." },
+    { word: "proselytization",    sentence: "Aggressive proselytization is unwelcome." },
+    { word: "circumnavigation",   sentence: "Their circumnavigation took a year." },
+    { word: "precocious",         sentence: "A precocious child reader." },
+    { word: "ostentation",        sentence: "Wealth without ostentation." },
+    { word: "magnanimously",      sentence: "She acted magnanimously." },
+    { word: "pulchritudinous",    sentence: "A pulchritudinous garden in spring." },
+    { word: "antidisestablishmentarianism", sentence: "Antidisestablishmentarianism is a famously long word." }
+  ]
+};
+
+// Old LEVELS shape kept only so legacy code that referenced LEVELS.length
+// (e.g. level-up bounds) still works without changes.
+const LEVELS = LEVEL_NAMES.map((name, i) => ({
+  name,
+  description: `Level ${i + 1}`,
+  words: []   // dynamic — see pickRoundWords / poolForCurrent
+}));
+
+// Maps (playerAge, level 0-9) → spelling-age band.
+// Level 1 (idx 0) → ~playerAge - 2;  Level 10 (idx 9) → ~playerAge + 4.
+function poolForAgeAndLevel(playerAge, levelIdx) {
+  const target = (playerAge || 7) - 2 + levelIdx * (6 / 9);
+  const minAge = Math.max(5, Math.floor(target - 0.5));
+  const maxAge = Math.min(17, Math.ceil(target + 0.5));
+  let pool = [];
+  for (let a = minAge; a <= maxAge; a++) {
+    if (MASTER_WORDS[a]) pool = pool.concat(MASTER_WORDS[a]);
+  }
+  // De-dupe in case the same word slips into two ages
+  const seen = new Set();
+  return pool.filter(w => seen.has(w.word) ? false : (seen.add(w.word), true));
+}
+
+function poolForCurrent() {
+  return poolForAgeAndLevel(state.age || 7, state.level);
+}
+
+// Replaces the array-shaped LEVELS reference used below.
+const __DISCARDED_LEVELS_BELOW__ = [
+  {
+    name: "Age 7",
+    description: "Year 2 — phonics & sight words",
+    words: [
+      { word: "jump",   sentence: "Frogs jump high in the pond." },
+      { word: "ship",   sentence: "The ship sails on the sea." },
+      { word: "fish",   sentence: "The fish swims fast." },
+      { word: "plant",  sentence: "Water the plant every day." },
+      { word: "swim",   sentence: "I can swim well." },
+      { word: "milk",   sentence: "Pour the milk in my cup." },
+      { word: "sand",   sentence: "I build castles in the sand." },
+      { word: "park",   sentence: "We play at the park." },
+      { word: "that",   sentence: "That is my book." },
+      { word: "with",   sentence: "Come with me." },
+      { word: "when",   sentence: "When is dinner?" },
+      { word: "what",   sentence: "What is your name?" },
+      { word: "said",   sentence: "She said hello to me." },
+      { word: "were",   sentence: "We were happy." },
+      { word: "they",   sentence: "They are my friends." },
+      { word: "look",   sentence: "Look at the rainbow." },
+      { word: "make",   sentence: "Let's make a cake." },
+      { word: "came",   sentence: "Mum came home early." },
+      { word: "like",   sentence: "I like ice cream." },
+      { word: "time",   sentence: "What time is it?" },
+      { word: "home",   sentence: "I am going home now." },
+      { word: "play",   sentence: "We play in the park." },
+      { word: "read",   sentence: "I can read a book." },
+      { word: "tree",   sentence: "Climb the tall tree." },
+      { word: "blue",   sentence: "The sky is blue today." },
+      { word: "cake",   sentence: "It is my birthday cake." },
+      { word: "fast",   sentence: "He can run very fast." },
+      { word: "cold",   sentence: "Ice is very cold." },
+      { word: "find",   sentence: "Find the hidden toy." },
+      { word: "good",   sentence: "Have a good day." }
+    ]
+  },
+  {
+    name: "Age 8",
+    description: "Year 3 — magic E & vowel teams",
+    words: [
+      { word: "smile",   sentence: "She has a big smile." },
+      { word: "paint",   sentence: "I paint a picture." },
+      { word: "sleep",   sentence: "It is time to sleep." },
+      { word: "dream",   sentence: "I had a happy dream." },
+      { word: "happy",   sentence: "I feel very happy." },
+      { word: "rabbit",  sentence: "The rabbit hopped away." },
+      { word: "garden",  sentence: "Flowers grow in the garden." },
+      { word: "pretty",  sentence: "What a pretty flower." },
+      { word: "hello",   sentence: "Say hello to your friend." },
+      { word: "lemon",   sentence: "A lemon tastes sour." },
+      { word: "light",   sentence: "Turn on the light." },
+      { word: "night",   sentence: "Stars shine at night." },
+      { word: "right",   sentence: "You are right about it." },
+      { word: "found",   sentence: "I found my missing book." },
+      { word: "sound",   sentence: "What is that sound?" },
+      { word: "around",  sentence: "Look around the room." },
+      { word: "brown",   sentence: "The bear has brown fur." },
+      { word: "sister",  sentence: "My sister is kind." },
+      { word: "water",   sentence: "Please pour the water." },
+      { word: "after",   sentence: "After dinner we play." },
+      { word: "before",  sentence: "Brush before bed." },
+      { word: "again",   sentence: "Please try again." },
+      { word: "every",   sentence: "I read every day." },
+      { word: "white",   sentence: "Snow is white." },
+      { word: "about",   sentence: "Tell me about your day." },
+      { word: "kitten",  sentence: "The kitten chased the yarn." },
+      { word: "monkey",  sentence: "The monkey climbed the tree." },
+      { word: "dragon",  sentence: "The dragon breathes fire." },
+      { word: "summer",  sentence: "We swim in summer." },
+      { word: "winter",  sentence: "It snows in winter." }
+    ]
+  },
+  {
+    name: "Age 9",
+    description: "Year 4 — tricky sight words",
+    words: [
+      { word: "friend",    sentence: "My best friend is funny." },
+      { word: "school",    sentence: "I walk to school." },
+      { word: "because",   sentence: "I am tired because I ran far." },
+      { word: "family",    sentence: "I love my family." },
+      { word: "people",    sentence: "Many people came to the show." },
+      { word: "would",     sentence: "I would like a snack." },
+      { word: "could",     sentence: "Could you help me?" },
+      { word: "should",    sentence: "We should be kind." },
+      { word: "where",     sentence: "Where is my bag?" },
+      { word: "there",     sentence: "Put it over there." },
+      { word: "their",     sentence: "That is their house." },
+      { word: "between",   sentence: "Sit between us." },
+      { word: "morning",   sentence: "Good morning, sunshine." },
+      { word: "thought",   sentence: "I thought about it carefully." },
+      { word: "through",   sentence: "Walk through the door." },
+      { word: "enough",    sentence: "I have had enough." },
+      { word: "myself",    sentence: "I did it all by myself." },
+      { word: "surprise",  sentence: "What a lovely surprise." },
+      { word: "beautiful", sentence: "What a beautiful day." },
+      { word: "favourite", sentence: "Blue is my favourite colour." },
+      { word: "jumping",   sentence: "The dog kept jumping up." },
+      { word: "walked",    sentence: "We walked home together." },
+      { word: "climbed",   sentence: "She climbed the steep hill." },
+      { word: "careful",   sentence: "Be careful with the glass." },
+      { word: "kindness",  sentence: "Show kindness to everyone." },
+      { word: "sleeping",  sentence: "The baby is sleeping." },
+      { word: "exciting",  sentence: "What an exciting day!" },
+      { word: "painted",   sentence: "She painted the wall blue." },
+      { word: "listened",  sentence: "I listened carefully." },
+      { word: "another",   sentence: "Can I have another one?" }
+    ]
+  },
+  {
+    name: "Age 10",
+    description: "Year 5 — silent letters & tricky vowels",
+    words: [
+      { word: "knife",       sentence: "Cut the bread with a knife." },
+      { word: "knight",      sentence: "A brave knight rode the horse." },
+      { word: "knock",       sentence: "Knock on the door first." },
+      { word: "lamb",        sentence: "A baby sheep is called a lamb." },
+      { word: "climb",       sentence: "I love to climb trees." },
+      { word: "ghost",       sentence: "The ghost story scared me." },
+      { word: "weight",      sentence: "Check the weight of the bag." },
+      { word: "eight",       sentence: "I am eight years old." },
+      { word: "height",      sentence: "Measure my height please." },
+      { word: "neighbour",   sentence: "Our neighbour is friendly." },
+      { word: "write",       sentence: "Write your name on the page." },
+      { word: "wrong",       sentence: "That answer is wrong." },
+      { word: "listen",      sentence: "Please listen carefully." },
+      { word: "often",       sentence: "I often visit my grandma." },
+      { word: "autumn",      sentence: "Leaves fall in autumn." },
+      { word: "ancient",     sentence: "An ancient castle stood there." },
+      { word: "science",     sentence: "Science is my favourite subject." },
+      { word: "naturally",   sentence: "Hair grows naturally." },
+      { word: "especially",  sentence: "I love fruit, especially mangoes." },
+      { word: "separate",    sentence: "Separate the colours please." },
+      { word: "calendar",    sentence: "Check the calendar for the date." },
+      { word: "library",     sentence: "Borrow books from the library." },
+      { word: "ordinary",    sentence: "It was an ordinary day." },
+      { word: "particular",  sentence: "I like this particular one." },
+      { word: "popular",     sentence: "That song is popular." },
+      { word: "regular",     sentence: "We meet on a regular basis." },
+      { word: "similar",     sentence: "These shapes are similar." },
+      { word: "several",     sentence: "Several friends came over." },
+      { word: "suddenly",    sentence: "It started to rain suddenly." },
+      { word: "definitely",  sentence: "I will definitely come." }
+    ]
+  },
+  {
+    name: "Age 11",
+    description: "Year 6 — academic vocabulary",
+    words: [
+      { word: "necessary",   sentence: "It is necessary to study." },
+      { word: "opposite",    sentence: "North is the opposite of south." },
+      { word: "occasion",    sentence: "A very special occasion." },
+      { word: "embarrass",   sentence: "Please don't embarrass me." },
+      { word: "address",     sentence: "Write your address here." },
+      { word: "balance",     sentence: "Keep your balance on the beam." },
+      { word: "recipe",      sentence: "Follow the recipe step by step." },
+      { word: "generous",    sentence: "She is a generous person." },
+      { word: "accident",    sentence: "It was just an accident." },
+      { word: "character",   sentence: "He has a kind character." },
+      { word: "recommend",   sentence: "I recommend this book." },
+      { word: "important",   sentence: "An important meeting today." },
+      { word: "government",  sentence: "The government made a new rule." },
+      { word: "environment", sentence: "We must protect the environment." },
+      { word: "equipment",   sentence: "Take all the sports equipment." },
+      { word: "opinion",     sentence: "Everyone has an opinion." },
+      { word: "sentence",    sentence: "Write a complete sentence." },
+      { word: "computer",    sentence: "Use the computer to type." },
+      { word: "document",    sentence: "Sign the document please." },
+      { word: "language",    sentence: "She speaks three languages." },
+      { word: "knowledge",   sentence: "Share your knowledge with others." },
+      { word: "courage",     sentence: "She showed great courage." },
+      { word: "century",     sentence: "We live in the 21st century." },
+      { word: "dictionary",  sentence: "Look it up in the dictionary." },
+      { word: "mystery",     sentence: "Solve the mystery together." },
+      { word: "treasure",    sentence: "Pirates buried treasure here." },
+      { word: "available",   sentence: "Tickets are still available." },
+      { word: "business",    sentence: "She runs her own business." },
+      { word: "decision",    sentence: "Make a wise decision." },
+      { word: "exercise",    sentence: "Daily exercise is healthy." }
+    ]
+  },
+  {
+    name: "Age 12",
+    description: "Year 7 — commonly misspelled",
+    words: [
+      { word: "parliament",   sentence: "Parliament passed the new law." },
+      { word: "vegetable",    sentence: "Eat your vegetables." },
+      { word: "conscience",   sentence: "Listen to your conscience." },
+      { word: "sincerely",    sentence: "I sincerely apologise." },
+      { word: "foreign",      sentence: "She visits a foreign country." },
+      { word: "restaurant",   sentence: "We ate at a new restaurant." },
+      { word: "ambulance",    sentence: "The ambulance arrived quickly." },
+      { word: "audience",     sentence: "The audience clapped loudly." },
+      { word: "schedule",     sentence: "Check the schedule today." },
+      { word: "scissors",     sentence: "Use the scissors carefully." },
+      { word: "vehicle",      sentence: "A red vehicle drove past." },
+      { word: "ceremony",     sentence: "The opening ceremony was grand." },
+      { word: "certificate",  sentence: "She received a certificate." },
+      { word: "conference",   sentence: "The conference starts at nine." },
+      { word: "continue",     sentence: "Please continue reading." },
+      { word: "criticise",    sentence: "Don't criticise unfairly." },
+      { word: "curiosity",    sentence: "Her curiosity led her on." },
+      { word: "descend",      sentence: "Descend the stairs slowly." },
+      { word: "develop",      sentence: "Develop your skills." },
+      { word: "disappear",    sentence: "The clouds will disappear." },
+      { word: "disappoint",   sentence: "I won't disappoint you." },
+      { word: "discipline",   sentence: "Self discipline matters." },
+      { word: "drought",      sentence: "A long drought hit the farm." },
+      { word: "enthusiastic", sentence: "She is enthusiastic about art." },
+      { word: "equipped",     sentence: "We are well equipped." },
+      { word: "exhibit",      sentence: "A new exhibit opens today." },
+      { word: "existence",    sentence: "Question its existence." },
+      { word: "familiar",     sentence: "A familiar face appeared." },
+      { word: "guarantee",    sentence: "I guarantee it will work." },
+      { word: "immediately",  sentence: "Come here immediately." }
+    ]
+  },
+  {
+    name: "Age 13",
+    description: "Year 8 — spelling bee starter",
+    words: [
+      { word: "rhythm",        sentence: "Feel the rhythm of the music." },
+      { word: "weird",         sentence: "What a weird coincidence." },
+      { word: "mischievous",   sentence: "A mischievous grin spread." },
+      { word: "embarrassed",   sentence: "She felt embarrassed." },
+      { word: "exaggerate",    sentence: "Don't exaggerate the story." },
+      { word: "accommodate",   sentence: "We can accommodate you." },
+      { word: "accomplish",    sentence: "Accomplish your goals." },
+      { word: "achievement",   sentence: "What a great achievement." },
+      { word: "acquaintance",  sentence: "He is an old acquaintance." },
+      { word: "advantage",     sentence: "Take the advantage." },
+      { word: "allegiance",    sentence: "Pledge your allegiance." },
+      { word: "amateur",       sentence: "She is an amateur photographer." },
+      { word: "analyse",       sentence: "Analyse the results carefully." },
+      { word: "apparent",      sentence: "The answer was apparent." },
+      { word: "appearance",    sentence: "He made a brief appearance." },
+      { word: "appreciate",    sentence: "I appreciate your help." },
+      { word: "argument",      sentence: "Avoid a pointless argument." },
+      { word: "assistance",    sentence: "Do you need assistance?" },
+      { word: "atmosphere",    sentence: "A friendly atmosphere filled the room." },
+      { word: "attendance",    sentence: "Daily attendance is required." },
+      { word: "autobiography", sentence: "Read her autobiography." },
+      { word: "behaviour",     sentence: "Excellent behaviour today." },
+      { word: "beneath",       sentence: "It was hidden beneath the rug." },
+      { word: "bicycle",       sentence: "I ride my bicycle to school." },
+      { word: "bouquet",       sentence: "He gave her a bouquet." },
+      { word: "brilliant",     sentence: "What a brilliant idea." },
+      { word: "broccoli",      sentence: "I love steamed broccoli." },
+      { word: "cathedral",     sentence: "The cathedral is ancient." },
+      { word: "cemetery",      sentence: "We visited the cemetery." },
+      { word: "necessary",     sentence: "Bring only what is necessary." }
+    ]
+  },
+  {
+    name: "Age 14",
+    description: "Year 9 — advanced spelling",
+    words: [
+      { word: "hierarchy",      sentence: "A strict hierarchy ruled the army." },
+      { word: "miscellaneous",  sentence: "A box of miscellaneous items." },
+      { word: "conscientious",  sentence: "She is a conscientious worker." },
+      { word: "perseverance",   sentence: "Perseverance leads to success." },
+      { word: "prejudice",      sentence: "We must reject prejudice." },
+      { word: "simultaneously", sentence: "It all happened simultaneously." },
+      { word: "supersede",      sentence: "New rules supersede the old." },
+      { word: "liaison",        sentence: "He acts as a liaison." },
+      { word: "leisure",        sentence: "Enjoy your leisure time." },
+      { word: "mortgage",       sentence: "They paid off the mortgage." },
+      { word: "mysterious",     sentence: "A mysterious figure waited." },
+      { word: "niece",          sentence: "My niece is turning seven." },
+      { word: "occurred",       sentence: "What occurred yesterday?" },
+      { word: "occurrence",     sentence: "It is a rare occurrence." },
+      { word: "omitted",        sentence: "He omitted one detail." },
+      { word: "opportunity",    sentence: "A golden opportunity arose." },
+      { word: "parallel",       sentence: "Draw two parallel lines." },
+      { word: "paralyse",       sentence: "Fear can paralyse a person." },
+      { word: "pastime",        sentence: "Reading is my favourite pastime." },
+      { word: "perceive",       sentence: "How do you perceive this?" },
+      { word: "persistent",     sentence: "The persistent rain continued." },
+      { word: "persuade",       sentence: "I tried to persuade him." },
+      { word: "phenomenon",     sentence: "It is a natural phenomenon." },
+      { word: "philosophy",     sentence: "She studies philosophy." },
+      { word: "physician",      sentence: "Ask your physician." },
+      { word: "picturesque",    sentence: "A picturesque village." },
+      { word: "possession",     sentence: "A prized possession." },
+      { word: "privilege",      sentence: "It is a great privilege." },
+      { word: "pronunciation",  sentence: "Practice your pronunciation." },
+      { word: "questionnaire",  sentence: "Fill out the questionnaire." }
+    ]
+  },
+  {
+    name: "Age 15",
+    description: "Year 10 — Greek & Latin roots",
+    words: [
+      { word: "bureaucracy",   sentence: "Government bureaucracy is slow." },
+      { word: "entrepreneur",  sentence: "She is a young entrepreneur." },
+      { word: "surveillance",  sentence: "Under constant surveillance." },
+      { word: "paraphernalia", sentence: "He brought all his paraphernalia." },
+      { word: "idiosyncrasy",  sentence: "An interesting idiosyncrasy." },
+      { word: "onomatopoeia",  sentence: "Buzz is an example of onomatopoeia." },
+      { word: "magnanimous",   sentence: "A magnanimous gesture." },
+      { word: "ostentatious",  sentence: "An ostentatious display of wealth." },
+      { word: "ubiquitous",    sentence: "Phones are now ubiquitous." },
+      { word: "perspicacious", sentence: "A perspicacious observation." },
+      { word: "gregarious",    sentence: "He is naturally gregarious." },
+      { word: "surreptitious", sentence: "A surreptitious glance." },
+      { word: "paraphrase",    sentence: "Paraphrase the long sentence." },
+      { word: "perpendicular", sentence: "Two perpendicular lines meet." },
+      { word: "pharmaceutical",sentence: "Pharmaceutical research is costly." },
+      { word: "presumptuous",  sentence: "It seems presumptuous to ask." },
+      { word: "pseudonym",     sentence: "She writes under a pseudonym." },
+      { word: "psychiatrist",  sentence: "He visits a psychiatrist." },
+      { word: "psychology",    sentence: "She studies psychology." },
+      { word: "reconnaissance",sentence: "A reconnaissance mission was planned." },
+      { word: "reminiscence",  sentence: "Fond reminiscences of childhood." },
+      { word: "rendezvous",    sentence: "Meet at the agreed rendezvous." },
+      { word: "reservoir",     sentence: "The reservoir is nearly full." },
+      { word: "restaurateur",  sentence: "A celebrated restaurateur." },
+      { word: "rhetorical",    sentence: "It was a rhetorical question." },
+      { word: "silhouette",    sentence: "Her silhouette appeared in the doorway." },
+      { word: "sophisticated", sentence: "A sophisticated solution." },
+      { word: "synonymous",    sentence: "Their names are synonymous with talent." },
+      { word: "tournament",    sentence: "She won the tournament." },
+      { word: "vacuum",        sentence: "Use the vacuum to clean the rug." }
+    ]
+  },
+  {
+    name: "Age 16",
+    description: "Year 11 — championship words",
+    words: [
+      { word: "acquiesce",       sentence: "I acquiesce to your demand." },
+      { word: "anachronism",     sentence: "A horse in the city is an anachronism." },
+      { word: "antediluvian",    sentence: "Antediluvian customs persisted." },
+      { word: "bourgeois",       sentence: "Bourgeois values shaped the era." },
+      { word: "chiaroscuro",     sentence: "The painting uses bold chiaroscuro." },
+      { word: "connoisseur",     sentence: "She is a wine connoisseur." },
+      { word: "consensus",       sentence: "The team reached a consensus." },
+      { word: "defenestration",  sentence: "Defenestration is throwing someone out a window." },
+      { word: "ennui",           sentence: "Long summers can bring on ennui." },
+      { word: "ethereal",        sentence: "Her voice had an ethereal quality." },
+      { word: "inchoate",        sentence: "An inchoate plan took shape." },
+      { word: "juxtaposition",   sentence: "A striking juxtaposition of styles." },
+      { word: "kaleidoscope",    sentence: "Look through the kaleidoscope." },
+      { word: "lackadaisical",   sentence: "A lackadaisical attitude annoyed the coach." },
+      { word: "malfeasance",     sentence: "He was charged with malfeasance." },
+      { word: "mellifluous",     sentence: "Her mellifluous voice soothed everyone." },
+      { word: "nonchalant",      sentence: "He gave a nonchalant shrug." },
+      { word: "obfuscate",       sentence: "Don't obfuscate the issue." },
+      { word: "omniscient",      sentence: "The novel uses an omniscient narrator." },
+      { word: "paradigm",        sentence: "A new paradigm in science." },
+      { word: "peripatetic",     sentence: "She lived a peripatetic life." },
+      { word: "quintessential",  sentence: "The quintessential summer day." },
+      { word: "soliloquy",       sentence: "Hamlet's famous soliloquy." },
+      { word: "supercilious",    sentence: "A supercilious smirk crossed his face." },
+      { word: "ubiquitously",    sentence: "Coffee shops appear ubiquitously." },
+      { word: "vicissitude",     sentence: "The vicissitudes of life." },
+      { word: "magnanimity",     sentence: "She showed great magnanimity." },
+      { word: "perspicacity",    sentence: "His perspicacity solved the case." },
+      { word: "recalcitrant",    sentence: "A recalcitrant student tested patience." },
+      { word: "sycophant",       sentence: "The king was surrounded by sycophants." }
+    ]
+  }
+];
+
+// ============================================================
+// STATE
+// ============================================================
+const STORAGE_KEY = 'spelling-bee-leo-v1';
+
+const APP_VERSION = '1.5.1';   // bumped each GitHub push
+const TEST_PHRASE = "G'day! I'll say words for you to spell.";
+document.getElementById('version-stamp').textContent = 'v' + APP_VERSION;
+
+const defaultState = {
+  name: null,
+  age: null,
+  level: 0,
+  highestLevel: 0,
+  rate: 0.85,
+  voiceName: null,
+  useAI: true,
+  aiVoiceId: 'gemini_achernar',
+  migrationVersion: 0,    // bumped by one-shot migrations below
+  words: {},
+  recentWords: [],       // last N words shown across rounds — used to avoid repeats
+  leaderboard: [],
+  wordSource: 'standard', // 'standard' (age-based) | 'psb' (imported competition list)
+  psbLevel: null          // selected competition level key (e.g. "2")
+};
+
+const RECENT_WORDS_LIMIT = 30;
+
+// ============================================================
+// IMPORTED COMPETITION WORD LIST (e.g. NSW Premier's Spelling Bee)
+// Stored ONLY in this browser's localStorage — never sent to the server
+// or committed to the repo, to respect the publisher's copyright terms.
+// ============================================================
+const PSB_KEY = 'spelling-bee-competition-list';
+function loadPSBList() {
+  try { const raw = localStorage.getItem(PSB_KEY); return raw ? JSON.parse(raw) : null; }
+  catch (e) { return null; }
+}
+function savePSBList(obj) {
+  try { localStorage.setItem(PSB_KEY, JSON.stringify(obj)); } catch (e) {}
+}
+function clearPSBList() {
+  try { localStorage.removeItem(PSB_KEY); } catch (e) {}
+}
+let psbList = loadPSBList();   // { name, levels: { "2": [...words], ... } }
+function psbLevelKeys() {
+  if (!psbList || !psbList.levels) return [];
+  return Object.keys(psbList.levels).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+}
+
+// Voice options — currently a single Gemini AI voice. Native browser
+// voices are still used as a fallback if /api/tts returns 503 (no key
+// set up) but they're not user-selectable from the dropdown.
+const VOICE_OPTIONS = [
+  { id: 'gemini_achernar',
+    label: '🇦🇺 Achernar — Australian female (Gemini AI)',
+    type: 'gemini' }
+];
+
+function findVoiceOption(id) {
+  return VOICE_OPTIONS.find(v => v.id === id);
+}
+
+function findNativeVoice(match) {
+  if (!match || !voices.length) return null;
+  const lang = (match.lang || '').toLowerCase();
+  const langPrefix = lang.slice(0, 5);
+  const hints = match.nameHints || [];
+  for (const name of hints) {
+    const v = voices.find(x => x.name === name && (x.lang || '').toLowerCase().startsWith(langPrefix));
+    if (v) return v;
+  }
+  for (const name of hints) {
+    const v = voices.find(x =>
+      x.name.toLowerCase().includes(name.toLowerCase()) &&
+      (x.lang || '').toLowerCase().startsWith(langPrefix)
+    );
+    if (v) return v;
+  }
+  return null;
+}
+
+async function ensureVoicesLoaded(timeoutMs = 1500) {
+  if (voices.length > 0) return;
+  loadVoices();
+  const deadline = Date.now() + timeoutMs;
+  while (voices.length === 0 && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 50));
+    loadVoices();
+  }
+}
+
+// Returns the API voice ID to use for fetch/playback, or null if native playback.
+function effectiveAIVoice() {
+  const opt = findVoiceOption(state.aiVoiceId);
+  if (!opt) return null;
+  if (opt.type === 'gemini') return opt.id;
+  if (opt.type === 'browser') {
+    return findNativeVoice(opt.match) ? null : (opt.fallback || 'gemini_achernar');
+  }
+  return null;
+}
+
+// Age 7 → Level 1, Age 8 → Level 2, …, Age 16 → Level 10
+function levelForAge(age) {
+  const clamped = Math.max(7, Math.min(16, age || 7));
+  return clamped - 7;
+}
+
+let state = loadState();
+
+// Migration: v1.3.0 removed Kokoro voices. If the saved aiVoiceId is no
+// longer in VOICE_OPTIONS, reset it so the dropdown shows a valid value.
+if (state.aiVoiceId && !VOICE_OPTIONS.find(v => v.id === state.aiVoiceId)) {
+  console.info('[spelling-bee] Migrating stale voice id', state.aiVoiceId, '→', defaultState.aiVoiceId);
+  state.aiVoiceId = defaultState.aiVoiceId;
+  saveState();
+}
+
+// One-shot migrations keyed by migrationVersion. Each block applies once per
+// user; after it runs, state.migrationVersion is bumped so the block never
+// triggers again — the user's subsequent choices stick.
+const CURRENT_MIGRATION_VERSION = 3;
+if ((state.migrationVersion || 0) < 2) {
+  // v1.3.5: force useAI=false once for everyone to manage Gemini rate-limit usage.
+  console.info('[spelling-bee] One-shot v2 migration: forcing useAI=false');
+  state.useAI = false;
+  state.migrationVersion = 2;
+  saveState();
+}
+if ((state.migrationVersion || 0) < 3) {
+  // v1.3.8: now that universal native fallback is in place and a Gemini
+  // spending cap is set, flip everyone back ON. Subsequent toggle-OFF
+  // by the user persists (migration only runs once per user).
+  console.info('[spelling-bee] One-shot v3 migration: forcing useAI=true');
+  state.useAI = true;
+  state.migrationVersion = 3;
+  saveState();
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { ...defaultState };
+    return { ...defaultState, ...JSON.parse(raw) };
+  } catch (e) {
+    return { ...defaultState };
+  }
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+// ============================================================
+// SPEECH
+// ============================================================
+let voices = [];
+function loadVoices() {
+  const all = speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+  // Australian voices first, then UK, then everything else
+  voices = all.sort((a, b) => {
+    const score = v => {
+      const lang = (v.lang || '').toLowerCase();
+      const name = (v.name || '').toLowerCase();
+      if (lang === 'en-au' || /karen|catherine|lee|russell|tessa.*au/.test(name)) return 0;
+      if (lang === 'en-gb') return 1;
+      return 2;
+    };
+    return score(a) - score(b);
+  });
+  const sel = document.getElementById('voice-select');
+  sel.innerHTML = '';
+  voices.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.name;
+    const flag = (v.lang || '').toLowerCase() === 'en-au' ? '🇦🇺 ' : '';
+    opt.textContent = `${flag}${v.name} (${v.lang})`;
+    sel.appendChild(opt);
+  });
+  // pick preferred voice — prefer Australian
+  if (state.voiceName && voices.find(v => v.name === state.voiceName)) {
+    sel.value = state.voiceName;
+  } else {
+    const preferred =
+      voices.find(v => (v.lang || '').toLowerCase() === 'en-au' && /karen|catherine/i.test(v.name)) ||
+      voices.find(v => (v.lang || '').toLowerCase() === 'en-au') ||
+      voices.find(v => /google.*australian/i.test(v.name)) ||
+      voices[0];
+    if (preferred) {
+      sel.value = preferred.name;
+      state.voiceName = preferred.name;
+      saveState();
+    }
+  }
+}
+
+speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+
+// AI voice (Gemini 3.1 Flash TTS via /api/tts) with persistent IndexedDB
+// cache and background prefetch — repeats of a word never re-call Gemini.
+const audioCache = new Map();   // in-memory: voiceId::text → blob URL
+const inFlight   = new Map();   // in-memory: voiceId::text → Promise (dedup parallel callers)
+let currentAudio = null;
+let activeUserSpeak = false;     // pauses background prefetch while user is hearing audio
+let prefetchRunning = false;
+let lastTTSError = null;         // surface API errors clearly
+
+// Free-tier Gemini TTS is ~3 req/min AND has a daily quota that can be just
+// a few dozen requests for preview models. We back off exponentially on
+// consecutive 429s so we stop hammering Google's API when the daily quota
+// is genuinely exhausted (kid still plays via the native-voice fallback).
+//
+//   1st 429: 90s    cooldown   (rate-limit, will probably resolve)
+//   2nd:     3 min
+//   3rd:     6 min
+//   4th:     12 min
+//   5th:     24 min
+//   6th:     48 min
+//   ...                       (capped at 24h)
+//
+// One successful fetch resets the counter to 0.
+let geminiThrottledUntil = 0;
+let geminiConsecutive429s = 0;
+const THROTTLE_BASE_MS    = 90 * 1000;
+const THROTTLE_MAX_MS     = 24 * 60 * 60 * 1000;
+const PREFETCH_INTERVAL_MS = 8000;   // (prefetch disabled in v1.3.9, kept for reference)
+
+// --- IndexedDB persistent cache ---
+const DB_NAME = 'spelling-bee-cache';
+const STORE   = 'audio';
+let dbPromise = null;
+function openDB() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve) => {
+    if (!('indexedDB' in window)) { resolve(null); return; }
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(null);
+  });
+  return dbPromise;
+}
+async function idbGet(key) {
+  const db = await openDB();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE, 'readonly');
+      const r = tx.objectStore(STORE).get(key);
+      r.onsuccess = () => resolve(r.result || null);
+      r.onerror = () => resolve(null);
+    } catch (e) { resolve(null); }
+  });
+}
+// Lightweight existence check — uses getKey so we don't load the blob.
+async function idbHas(key) {
+  const db = await openDB();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE, 'readonly');
+      const r = tx.objectStore(STORE).getKey(key);
+      r.onsuccess = () => resolve(r.result !== undefined);
+      r.onerror = () => resolve(false);
+    } catch (e) { resolve(false); }
+  });
+}
+async function idbPut(key, blob) {
+  const db = await openDB();
+  if (!db) return;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(blob, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    } catch (e) { resolve(); }
+  });
+}
+async function idbClear() {
+  const db = await openDB();
+  if (!db) return;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    } catch (e) { resolve(); }
+  });
+}
+
+// Reject a promise if it doesn't settle within ms milliseconds.
+function withTimeout(p, ms, msg) {
+  return Promise.race([
+    p,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms))
+  ]);
+}
+
+// SHA-1 hex of "voiceId::text". MUST match hashKey() in scripts/generate-audio.js
+// so the static .wav filenames line up between the script and the frontend.
+async function hashTextKey(voiceId, text) {
+  const enc = new TextEncoder();
+  const data = enc.encode(`${voiceId}::${text}`);
+  const buf = await crypto.subtle.digest('SHA-1', data);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Loaded once, lazily — set of all hashes that exist as /audio/<hash>.wav
+// files on the server. Lets us skip the HEAD/GET round-trip for words that
+// we know aren't pre-generated.
+let staticIndexPromise = null;
+async function staticIndex() {
+  if (!staticIndexPromise) {
+    staticIndexPromise = fetch('/audio/index.json', { cache: 'force-cache' })
+      .then(r => r.ok ? r.json() : [])
+      .then(arr => new Set(arr))
+      .catch(() => new Set());
+  }
+  return staticIndexPromise;
+}
+
+// Try to fetch pre-generated audio from /public/audio/<hash>.wav. Returns
+// a Blob on hit, null on miss. Free (no Gemini call, just a CDN hit).
+async function tryStaticAudio(voiceId, text) {
+  try {
+    const idx = await staticIndex();
+    const hash = await hashTextKey(voiceId, text);
+    if (!idx.has(hash)) return null;
+    const res = await fetch(`/audio/${hash}.wav`, { cache: 'force-cache' });
+    if (!res.ok) return null;
+    return await res.blob();
+  } catch (e) {
+    return null;
+  }
+}
+
+// Get audio for a word.
+// Cache flow:
+//   1. in-memory map
+//   2. in-flight dedup
+//   3. IndexedDB
+//   4. /public/audio/<hash>.wav  ← pre-generated, free
+//   5. /api/tts                  ← live Gemini, costs money, last resort
+async function getAIAudio(text, voiceId) {
+  voiceId = voiceId || effectiveAIVoice() || state.aiVoiceId;
+  if (!voiceId) throw new Error('No AI voice selected');
+  const key = `${voiceId}::${text}`;
+
+  if (audioCache.has(key)) return audioCache.get(key);
+  if (inFlight.has(key))   return inFlight.get(key);
+
+  const promise = (async () => {
+    // 3. IndexedDB cache (persistent across reloads)
+    const cached = await idbGet(key);
+    if (cached) {
+      const url = URL.createObjectURL(cached);
+      audioCache.set(key, url);
+      return url;
+    }
+
+    // 4. Pre-generated static audio served by Vercel CDN — zero API cost
+    const staticBlob = await tryStaticAudio(voiceId, text);
+    if (staticBlob) {
+      const url = URL.createObjectURL(staticBlob);
+      audioCache.set(key, url);
+      idbPut(key, staticBlob);  // persist so we skip the network entirely next time
+      return url;
+    }
+
+    // 5. Honor the rate-limit cooldown — failing fast lets speak() drop to
+    //    the native voice instead of waiting for another 429.
+    if (Date.now() < geminiThrottledUntil) {
+      throw new Error('429 throttled (cooldown active)');
+    }
+
+    // 5. Network fetch
+    console.info('[spelling-bee] Fetching /api/tts for', voiceId, JSON.stringify(text));
+    const res = await withTimeout(
+      fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: voiceId })
+      }),
+      30000,
+      'TTS request timed out — check connection'
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err.error || `HTTP ${res.status}`;
+      const isRateLimit = res.status === 429 || /429|rate.?limit/i.test(msg) ||
+                          /429/.test(err.detail || '');
+      if (isRateLimit) {
+        geminiConsecutive429s++;
+        // 90s, 3min, 6min, 12min, 24min, 48min, ... capped at 24h.
+        const cooldownMs = Math.min(
+          THROTTLE_BASE_MS * Math.pow(2, geminiConsecutive429s - 1),
+          THROTTLE_MAX_MS
+        );
+        geminiThrottledUntil = Date.now() + cooldownMs;
+        const minutes = Math.round(cooldownMs / 60000);
+        const human = cooldownMs < 60000 ? `${Math.round(cooldownMs/1000)}s`
+                    : minutes < 60         ? `${minutes} min`
+                    :                        `${Math.round(minutes/60)} h`;
+        lastTTSError = cooldownMs >= 5 * 60 * 1000
+          ? `Gemini quota likely exhausted. Using device voice for ${human}. Enable billing on Google Cloud project for higher quota.`
+          : `Rate limit — using device voice for ${human}.`;
+        console.warn(`[spelling-bee] Gemini 429 #${geminiConsecutive429s}. Cooling off ${human}.`);
+      } else if (res.status === 503) {
+        lastTTSError = 'GEMINI_API_KEY not configured in Vercel.';
+      } else {
+        lastTTSError = msg;
+      }
+      throw new Error(msg);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    audioCache.set(key, url);
+    idbPut(key, blob);  // fire-and-forget persist
+    // Reset the 429 streak — Gemini is responding again
+    geminiConsecutive429s = 0;
+    lastTTSError = null;
+    return url;
+  })();
+
+  inFlight.set(key, promise);
+  try {
+    return await promise;
+  } finally {
+    inFlight.delete(key);
+  }
+}
+
+// Text used for "Say the word" / "Slower". Single word + period.
+// The period gives Gemini sentence-final intonation, matching the
+// bookend "${w}." inside sentenceFormFor() — so pronunciation should
+// be consistent between "Say the word" and "In a sentence".
+//
+// Trade-off vs "${w}. ${w}." (judge-double):
+//   - Audio output ~50% shorter → ~half the per-word cost
+//   - Risk: some short common words (e.g. "good") may still hallucinate
+//     as conversation. If that returns, switch back to judge-double here.
+function wordTextFor(w) {
+  return `${w.word}.`;
+}
+
+// Returns the sentence form spoken by "In a sentence" — same shape as a
+// real spelling-bee judge: word, then sentence, then word again.
+// Competition words have no sentence; fall back to just saying the word.
+function sentenceFormFor(w) {
+  if (!w.sentence) return `${w.word}. ${w.word}.`;
+  return `${w.word}. ${w.sentence}. ${w.word}.`;
+}
+
+// True if we already have BOTH the word and the sentence-form audio for
+// this word — in memory or IndexedDB. No network call, no blob load.
+async function isWordPairCached(w, voiceId) {
+  const wKey = `${voiceId}::${wordTextFor(w)}`;
+  const sKey = `${voiceId}::${sentenceFormFor(w)}`;
+  const wOK = audioCache.has(wKey) || await idbHas(wKey);
+  const sOK = audioCache.has(sKey) || await idbHas(sKey);
+  return wOK && sOK;
+}
+
+// Builds the prefetch queue: current round → current level's pool → next
+// level's pool. Two levels deep means cache extends past the kid's current
+// level so advancing levels feels instant. De-duped by word string.
+function buildPrefetchQueue() {
+  const queue = [];
+  const seen = new Set();
+  const add = w => { if (w && !seen.has(w.word)) { queue.push(w); seen.add(w.word); } };
+  if (round.words) round.words.forEach(add);          // priority 1: this round
+  poolForCurrent().forEach(add);                       // priority 2: current level
+  if (state.level < LEVEL_NAMES.length - 1) {          // priority 3: next level
+    poolForAgeAndLevel(state.age || 7, state.level + 1).forEach(add);
+  }
+  return queue;
+}
+
+// Background prefetch — DISABLED in v1.3.9 to preserve Gemini quota.
+//
+// Lazy-loading strategy instead:
+//   • Word audio: fetched when presentWord() auto-plays (or on Play/Slower).
+//   • Sentence audio: fetched only when "In a sentence" is tapped.
+//   • Everything is cached in IndexedDB forever, so each unique word costs
+//     at most one /api/tts request per device for its lifetime.
+//
+// If you want to re-enable prefetch later, the implementation is in git
+// history (commit c1269f3). Costs ~10x more API calls than lazy loading.
+async function ensurePrefetch() {
+  return;   // intentional no-op
+}
+
+function stopAllSpeech() {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  if (currentAudio) {
+    try { currentAudio.pause(); currentAudio.currentTime = 0; } catch (e) {}
+    currentAudio = null;
+  }
+}
+
+async function speak(text, opts = {}) {
+  stopAllSpeech();
+  activeUserSpeak = true;
+  const playBtn = document.getElementById('play-btn');
+  try {
+    if (state.useAI && state.aiVoiceId) {
+      // Make sure speechSynthesis voices are loaded BEFORE deciding native-vs-AI
+      await ensureVoicesLoaded();
+
+      const opt = findVoiceOption(state.aiVoiceId);
+
+      // Native browser voice (e.g. real Aussie Karen / Lee on macOS/iOS/Edge)
+      if (opt && opt.type === 'browser') {
+        const nativeVoice = findNativeVoice(opt.match);
+        if (nativeVoice) {
+          speakWithVoice(text, nativeVoice, opts);
+          return;
+        }
+        // Not installed on this device — fall through to Gemini fallback
+        const note = `No native ${opt.match.nameHints[0]}-style voice on this device — using Gemini Achernar as fallback.`;
+        const fbEl = document.getElementById('ai-feedback');
+        if (fbEl && !fbEl.dataset.warned) {
+          showAIFeedback(note, true);
+          fbEl.dataset.warned = '1';
+        }
+      }
+      // AI voice path (Gemini)
+      // While we're inside a rate-limit cooldown, skip the network round-trip
+      // and play via the native browser voice so the kid isn't stuck mid-round.
+      if (Date.now() < geminiThrottledUntil) {
+        console.info('[spelling-bee] Gemini cooldown active — using native fallback');
+        const cooldownSec = Math.ceil((geminiThrottledUntil - Date.now()) / 1000);
+        showAIFeedback(`Gemini rate limited — using device voice (resumes in ${cooldownSec}s).`, true);
+        speakBrowser(text, opts);
+        return;
+      }
+      try {
+        if (playBtn) playBtn.textContent = '⏳ Fetching voice…';
+        const voiceId = effectiveAIVoice();
+        if (!voiceId) throw new Error('No AI voice resolved for ' + state.aiVoiceId);
+        console.info('[spelling-bee] Game speak via Gemini', voiceId, '"' + text + '"');
+        const url = await getAIAudio(text, voiceId);
+        if (playBtn) playBtn.textContent = '🔊 Say the word';
+        const audio = new Audio(url);
+        audio.volume = 1.0;
+        audio.playbackRate = Math.max(0.5, Math.min(2.0, opts.rate || state.rate));
+        currentAudio = audio;
+        try {
+          await audio.play();
+        } catch (playErr) {
+          console.warn('[spelling-bee] Audio.play() rejected:', playErr.name, playErr.message);
+          if (playErr && playErr.name === 'NotAllowedError') {
+            showAIFeedback('Autoplay was blocked — tap 🔊 to hear it (audio is cached now, so it will be instant).', true);
+          }
+        }
+        return;
+      } catch (e) {
+        if (playBtn) playBtn.textContent = '🔊 Say the word';
+        console.error('[spelling-bee] AI voice failed:', e);
+        // Universal fallback: on ANY Gemini error during gameplay (rate
+        // limit, spending cap reached, 503 no-key, network failure, bad
+        // response), drop to the native device voice so the kid never
+        // gets silence. The notice tells the parent what's wrong.
+        if (Date.now() < geminiThrottledUntil) {
+          const cooldownSec = Math.ceil((geminiThrottledUntil - Date.now()) / 1000);
+          showAIFeedback(`Gemini rate limited — using device voice (resumes in ${cooldownSec}s).`, true);
+        } else {
+          showAIFeedback('AI voice unavailable — using device voice. ' + (e.message || e), true);
+        }
+        speakBrowser(text, opts);
+        return;
+      }
+    }
+    // useAI was OFF — play the user's explicit plain-browser voice choice
+    speakBrowser(text, opts);
+  } finally {
+    if (playBtn && playBtn.textContent.startsWith('⏳')) {
+      playBtn.textContent = '🔊 Say the word';
+    }
+    setTimeout(() => { activeUserSpeak = false; }, 50);
+  }
+}
+
+function speakWithVoice(text, voice, opts = {}) {
+  if (!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.voice = voice;
+  u.rate = opts.rate || state.rate;
+  u.pitch = 1;
+  u.lang = voice.lang;
+  speechSynthesis.speak(u);
+}
+
+function speakBrowser(text, opts = {}) {
+  if (!('speechSynthesis' in window)) return;
+  const v = voices.find(x => x.name === state.voiceName);
+  speakWithVoice(text, v || voices[0], opts);
+}
+
+function showAIFeedback(msg, isError) {
+  const el = document.getElementById('ai-feedback');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? '#991b1b' : '#065f46';
+}
+
+// ============================================================
+// GAME LOGIC
+// ============================================================
+const ROUND_LENGTH = 10;
+const LEVEL_UP_THRESHOLD = 8;
+
+let round = { words: [], index: 0, correct: 0, results: [] };
+
+function pickRoundWords() {
+  let pool;
+  if (state.wordSource === 'psb' && psbList && psbList.levels[state.psbLevel]) {
+    // Competition words are plain strings with no example sentence.
+    pool = psbList.levels[state.psbLevel].map(w => ({ word: w, sentence: '' }));
+  } else {
+    pool = poolForCurrent();
+  }
+  pool = pool.slice();
+  // Fisher-Yates shuffle
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  // Avoid recently-shown words for variety. If the pool is too small to
+  // afford that, fall back to the full shuffled pool.
+  const recent = new Set(state.recentWords || []);
+  let working = pool.filter(w => !recent.has(w.word));
+  if (working.length < ROUND_LENGTH) working = pool;
+
+  // Tricky-word bias: at most ONE word per round (was 3) and only ~50% of the
+  // time — so the kid mostly sees fresh content but occasionally revisits a
+  // word they got wrong before.
+  const trickyCandidates = working.filter(w =>
+    state.words[w.word] && state.words[w.word].wrong > state.words[w.word].right);
+  const tricky = (trickyCandidates.length > 0 && Math.random() < 0.5)
+    ? [trickyCandidates[0]]
+    : [];
+
+  const others = working.filter(w => !tricky.includes(w));
+  const picked = [...tricky, ...others].slice(0, ROUND_LENGTH);
+
+  // Remember these words so the next round avoids them
+  state.recentWords = [...(state.recentWords || []), ...picked.map(w => w.word)];
+  if (state.recentWords.length > RECENT_WORDS_LIMIT) {
+    state.recentWords = state.recentWords.slice(-RECENT_WORDS_LIMIT);
+  }
+  saveState();
+
+  return picked;
+}
+
+function startRound() {
+  round = { words: pickRoundWords(), index: 0, correct: 0, results: [] };
+  showScreen('game');
+  renderProgress();
+  presentWord();
+  // Keep the AI cache warm — prefetch round words first, then broader pool
+  if (state.useAI) setTimeout(ensurePrefetch, 200);
+}
+
+function presentWord() {
+  document.getElementById('round-info').textContent =
+    `Word ${round.index + 1} of ${round.words.length}`;
+  const input = document.getElementById('answer');
+  input.value = '';
+  input.disabled = false;
+  input.focus();
+  setFeedback('', '');
+  renderProgress();
+  // Hide "In a sentence" for competition words (they have no example sentence).
+  const curWord = round.words[round.index];
+  const sentBtn = document.getElementById('sentence-btn');
+  if (sentBtn) sentBtn.style.display = curWord.sentence ? '' : 'none';
+  setTimeout(() => {
+    speak(wordTextFor(curWord));   // say the word
+    // No sentence prefetch. "In a sentence" fetches lazily on click — if
+    // the kid never clicks it, we never burn API quota on sentences.
+  }, 200);
+}
+
+function renderProgress() {
+  const p = document.getElementById('progress');
+  p.innerHTML = '';
+  for (let i = 0; i < round.words.length; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    if (round.results[i] === true) d.classList.add('right');
+    else if (round.results[i] === false) d.classList.add('wrong');
+    if (i === round.index) d.classList.add('current');
+    d.textContent = i + 1;
+    p.appendChild(d);
+  }
+}
+
+function setFeedback(html, cls) {
+  const fb = document.getElementById('feedback');
+  fb.innerHTML = html;
+  fb.className = cls || 'empty';
+  if (!cls) fb.classList.add('empty');
+}
+
+function checkAnswer(e) {
+  e && e.preventDefault();
+  const input = document.getElementById('answer');
+  const given = (input.value || '').trim().toLowerCase();
+  if (!given) {
+    input.focus();
+    return;
+  }
+  const target = round.words[round.index].word.toLowerCase();
+  const isRight = given === target;
+
+  // track
+  const entry = state.words[target] || { right: 0, wrong: 0, level: state.level };
+  if (isRight) entry.right++; else entry.wrong++;
+  entry.level = state.level;
+  state.words[target] = entry;
+  saveState();
+
+  round.results[round.index] = isRight;
+  if (isRight) round.correct++;
+
+  input.disabled = true;
+
+  if (isRight) {
+    const cheers = ['Yes!', 'Nice!', 'Great!', 'Bee-rilliant!', 'Spot on!', 'Awesome!', 'You got it!'];
+    setFeedback(`✨ ${cheers[Math.floor(Math.random() * cheers.length)]} ✨`, 'correct');
+  } else {
+    setFeedback(
+      `Almost! The word is<div class="correct-word">${target}</div>`,
+      'wrong'
+    );
+    // gently say it again
+    setTimeout(() => speak(target, { rate: 0.7 }), 600);
+  }
+
+  renderProgress();
+
+  setTimeout(() => {
+    round.index++;
+    if (round.index >= round.words.length) {
+      finishRound();
+    } else {
+      presentWord();
+    }
+  }, isRight ? 1200 : 2400);
+}
+
+function finishRound() {
+  showScreen('end');
+  const score = round.correct;
+  const total = round.words.length;
+  document.getElementById('end-score').textContent = `${score} / ${total}`;
+
+  // Save round to the shared leaderboard (with local fallback).
+  // Competition (PSB) practice rounds are NOT submitted — they'd mix
+  // competition levels into the age-based casual leaderboard. Per-word
+  // stats are still tracked (see checkAnswer) so progress is recorded.
+  if (state.name && state.age && state.wordSource !== 'psb') {
+    submitScore({
+      name: state.name,
+      age: state.age,
+      score,
+      total,
+      level: state.level,
+      date: new Date().toISOString()
+    });
+  }
+
+  let emoji, title, msg;
+  if (score === total) {
+    emoji = '🏆'; title = 'PERFECT!'; msg = 'You spelled every word right!';
+  } else if (score >= LEVEL_UP_THRESHOLD) {
+    emoji = '⭐'; title = 'Great job!'; msg = 'You are ready for the next level!';
+  } else if (score >= 5) {
+    emoji = '👍'; title = 'Good try!'; msg = 'Keep practising and you will level up soon.';
+  } else {
+    emoji = '🐝'; title = 'Buzz buzz!'; msg = 'Practice makes perfect. Try again!';
+  }
+
+  document.getElementById('celebrate-emoji').textContent = emoji;
+  document.getElementById('end-title').textContent = title;
+  document.getElementById('end-message').textContent = msg;
+
+  const lvlBtn = document.getElementById('level-up-btn');
+  if (state.wordSource === 'psb') {
+    // Competition mode: level up = next PSB level (e.g. Level 2 → 3)
+    const keys = psbLevelKeys();
+    const idx = keys.indexOf(state.psbLevel);
+    const canUp = score >= LEVEL_UP_THRESHOLD && idx >= 0 && idx < keys.length - 1;
+    lvlBtn.style.display = canUp ? 'block' : 'none';
+    if (canUp) lvlBtn.textContent = `⬆ Move up to Level ${keys[idx + 1]}`;
+  } else {
+    const canLevelUp = score >= LEVEL_UP_THRESHOLD && state.level < LEVEL_NAMES.length - 1;
+    lvlBtn.style.display = canLevelUp ? 'block' : 'none';
+    if (canLevelUp) {
+      lvlBtn.textContent = `⬆ Move up to Level ${state.level + 2}: ${LEVEL_NAMES[state.level + 1]}`;
+      if (state.level + 1 > state.highestLevel) {
+        state.highestLevel = state.level + 1;
+        saveState();
+      }
+    }
+  }
+}
+
+// ============================================================
+// SCREENS
+// ============================================================
+function showScreen(name) {
+  ['welcome','game','end','stats','level','leaderboard'].forEach(s => {
+    const el = document.getElementById(s + '-screen');
+    el.classList.toggle('screen-active', s === name);
+  });
+  const playerPrefix = state.name ? `${state.name} · ` : '';
+  if (state.wordSource === 'psb' && psbList) {
+    document.getElementById('level-tag').textContent =
+      `${playerPrefix}🐝 Bee · Level ${state.psbLevel}`;
+  } else {
+    document.getElementById('level-tag').textContent =
+      `${playerPrefix}Age ${state.age || 7} · Lv ${state.level + 1}: ${LEVEL_NAMES[state.level]}`;
+  }
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function renderStats() {
+  let total = 0, right = 0, wrong = 0;
+  Object.values(state.words).forEach(w => { total += w.right + w.wrong; right += w.right; wrong += w.wrong; });
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-right').textContent = right;
+  document.getElementById('stat-wrong').textContent = wrong;
+  document.getElementById('stat-accuracy').textContent =
+    total ? Math.round(right / total * 100) + '%' : '0%';
+  document.getElementById('stat-level').textContent = state.highestLevel + 1;
+
+  const entries = Object.entries(state.words);
+
+  const mastered = entries
+    .filter(([_, w]) => w.right >= 3 && w.right >= w.wrong * 2)
+    .sort((a, b) => b[1].right - a[1].right);
+
+  const tricky = entries
+    .filter(([_, w]) => w.wrong > 0 && w.wrong >= w.right)
+    .sort((a, b) => b[1].wrong - a[1].wrong);
+
+  const masteredEl = document.getElementById('mastered-list');
+  if (mastered.length === 0) {
+    masteredEl.innerHTML = '<em>None yet — keep going!</em>';
+  } else {
+    masteredEl.innerHTML = mastered
+      .map(([w, s]) => `<span class="word-chip">${w}<span class="count">${s.right}✓</span></span>`)
+      .join('');
+  }
+
+  const trickyEl = document.getElementById('tricky-list');
+  if (tricky.length === 0) {
+    trickyEl.innerHTML = '<em>No tricky words yet!</em>';
+  } else {
+    trickyEl.innerHTML = tricky
+      .map(([w, s]) => `<span class="word-chip">${w}<span class="count">${s.wrong}✗</span></span>`)
+      .join('');
+  }
+}
+
+// ============================================================
+// LEADERBOARD (shared via /api/leaderboard, local cache fallback)
+// ============================================================
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+let lastLoadStatus = 'idle';   // 'idle' | 'online' | 'offline' | 'unconfigured'
+
+// Try to read the shared board from the server. Merge with any local-only
+// entries (e.g. submitted while offline) so they remain visible on this device.
+async function loadLeaderboard() {
+  let remote = null;
+  try {
+    const res = await fetch('/api/leaderboard', { cache: 'no-store' });
+    if (res.status === 503) {
+      lastLoadStatus = 'unconfigured';
+    } else if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.entries)) {
+        remote = data.entries;
+        lastLoadStatus = 'online';
+      }
+    } else {
+      lastLoadStatus = 'offline';
+    }
+  } catch (e) {
+    console.warn('[leaderboard] load failed:', e);
+    lastLoadStatus = 'offline';
+  }
+
+  const local = state.leaderboard || [];
+  if (!remote) {
+    return local;
+  }
+  // Merge: dedupe by (name|age|score|level|date)
+  const sig = e => `${e.name}|${e.age}|${e.score}|${e.level}|${e.date}`;
+  const remoteSigs = new Set(remote.map(sig));
+  const localOnly = local.filter(e => !remoteSigs.has(sig(e)));
+  const merged = [...remote, ...localOnly];
+  state.leaderboard = merged;
+  saveState();
+  return merged;
+}
+
+// POST a completed round. Optimistically saves locally first so the leaderboard
+// always reflects the kid's most recent score even on a flaky network.
+async function submitScore(entry) {
+  state.leaderboard = state.leaderboard || [];
+  state.leaderboard.push(entry);
+  if (state.leaderboard.length > 500) {
+    state.leaderboard = state.leaderboard.slice(-500);
+  }
+  saveState();
+  try {
+    const res = await fetch('/api/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('[leaderboard] submit failed:', res.status, err);
+    }
+  } catch (e) {
+    console.warn('[leaderboard] submit network error:', e);
+  }
+}
+
+// Best entry per name within an age group, ranked by score then level then recency.
+function topForAge(age, limit = 10) {
+  const inAge = (state.leaderboard || []).filter(e => e.age === age);
+  const byName = new Map();
+  for (const e of inAge) {
+    const cur = byName.get(e.name);
+    if (!cur ||
+        e.score > cur.score ||
+        (e.score === cur.score && e.level > cur.level) ||
+        (e.score === cur.score && e.level === cur.level && (e.date || '') > (cur.date || ''))) {
+      byName.set(e.name, e);
+    }
+  }
+  return Array.from(byName.values())
+    .sort((a, b) =>
+      b.score - a.score ||
+      b.level - a.level ||
+      (b.date || '').localeCompare(a.date || ''))
+    .slice(0, limit);
+}
+
+let selectedLeaderboardAge = null;
+
+async function renderLeaderboard() {
+  const el = document.getElementById('leaderboard-content');
+  el.innerHTML = '<p style="text-align:center; padding:20px;"><em>Loading…</em></p>';
+
+  await loadLeaderboard();
+
+  el.innerHTML = '';
+
+  // Connection status pill
+  const statusEl = document.createElement('div');
+  statusEl.style.textAlign = 'center';
+  statusEl.style.marginBottom = '10px';
+  statusEl.style.fontSize = '0.85em';
+  if (lastLoadStatus === 'online') {
+    statusEl.innerHTML = '<span style="color:#065f46;">🌐 Shared with everyone</span>';
+  } else if (lastLoadStatus === 'offline') {
+    statusEl.innerHTML = '<span style="color:#991b1b;">📵 Offline — local scores only</span>';
+  } else if (lastLoadStatus === 'unconfigured') {
+    statusEl.innerHTML = '<span style="color:#92400e;">⚙ Shared leaderboard not configured yet</span>';
+  }
+  el.appendChild(statusEl);
+
+  const board = state.leaderboard || [];
+
+  // Ages with at least one entry, plus the current player's age (so the
+  // current player sees their own tab even before they've played).
+  const ageSet = new Set(board.map(e => Number(e.age)).filter(a => Number.isFinite(a)));
+  if (state.age) ageSet.add(state.age);
+  const ages = [...ageSet].sort((a, b) => a - b);
+
+  if (ages.length === 0) {
+    const empty = document.createElement('p');
+    empty.style.textAlign = 'center';
+    empty.style.padding = '20px';
+    empty.innerHTML = '<em>No scores yet — finish a round!</em>';
+    el.appendChild(empty);
+    return;
+  }
+
+  // Default to current player's age. Sticky across re-renders for tab clicks.
+  if (selectedLeaderboardAge === null || !ages.includes(selectedLeaderboardAge)) {
+    selectedLeaderboardAge = ages.includes(state.age) ? state.age : ages[0];
+  }
+
+  // Tabs
+  const tabsEl = document.createElement('div');
+  tabsEl.className = 'leaderboard-tabs';
+  ages.forEach(age => {
+    const btn = document.createElement('button');
+    btn.className = 'leaderboard-tab';
+    if (age === selectedLeaderboardAge) btn.classList.add('active');
+    btn.textContent = age === state.age ? `Age ${age} (you)` : `Age ${age}`;
+    btn.onclick = () => {
+      selectedLeaderboardAge = age;
+      renderLeaderboard();
+    };
+    tabsEl.appendChild(btn);
+  });
+  el.appendChild(tabsEl);
+
+  // Entries for the selected age only
+  const entries = topForAge(selectedLeaderboardAge, 10);
+  if (entries.length === 0) {
+    const empty = document.createElement('p');
+    empty.style.textAlign = 'center';
+    empty.style.padding = '20px';
+    empty.innerHTML = `<em>No scores for Age ${selectedLeaderboardAge} yet — be the first!</em>`;
+    el.appendChild(empty);
+    return;
+  }
+  entries.forEach((e, i) => {
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+    const isMe = e.name === state.name && e.age === state.age;
+    const nameDisplay = isMe
+      ? `<strong style="color:#065f46;">${escapeHtml(e.name)} (you)</strong>`
+      : escapeHtml(e.name);
+    row.innerHTML =
+      `<span>${medal} ${nameDisplay}</span>` +
+      `<strong>${e.score}/${e.total} · Lv ${e.level + 1}</strong>`;
+    el.appendChild(row);
+  });
+}
+
+// ============================================================
+// LEVEL PICKER
+// ============================================================
+function renderLevels() {
+  const grid = document.getElementById('level-grid');
+  grid.innerHTML = '';
+  LEVEL_NAMES.forEach((name, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'level-btn';
+    if (i > state.highestLevel) btn.classList.add('locked');
+    if (i === state.level) btn.classList.add('current');
+    // Show 3 random sample words from THIS player's pool at THIS level — gives a feel for difficulty
+    const pool = poolForAgeAndLevel(state.age || 7, i);
+    const sampled = [];
+    const seen = new Set();
+    while (sampled.length < 3 && seen.size < pool.length) {
+      const w = pool[Math.floor(Math.random() * pool.length)];
+      if (!w || seen.has(w.word)) continue;
+      seen.add(w.word);
+      sampled.push(w.word);
+    }
+    const sampleText = sampled.length ? sampled.join(', ') + '…' : '—';
+    btn.innerHTML = `
+      <span class="level-num">${i + 1}${i > state.highestLevel ? ' 🔒' : ''}</span>
+      <strong>${name}</strong><br>
+      <small>${sampleText}</small>
+    `;
+    btn.onclick = () => {
+      if (i > state.highestLevel) return;
+      state.level = i;
+      saveState();
+      startRound();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+// ============================================================
+// COMPETITION WORD LIST UI
+// ============================================================
+function showImportFeedback(msg, isError) {
+  const el = document.getElementById('import-feedback');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.color = isError ? '#991b1b' : '#065f46';
+}
+
+function renderWordlistSection() {
+  const label = document.getElementById('active-list-label');
+  const psbDiv = document.getElementById('psb-levels');
+  if (!label || !psbDiv) return;
+
+  if (psbList && psbLevelKeys().length) {
+    psbDiv.style.display = 'block';
+    label.innerHTML = (state.wordSource === 'psb')
+      ? `<strong>🐝 ${escapeHtml(psbList.name)}</strong> · Level ${state.psbLevel}`
+      : `<strong>Standard</strong> (by age)`;
+
+    const grid = document.getElementById('psb-level-grid');
+    grid.innerHTML = '';
+    psbLevelKeys().forEach(k => {
+      const words = psbList.levels[k];
+      const btn = document.createElement('button');
+      btn.className = 'level-btn';
+      if (state.wordSource === 'psb' && state.psbLevel === k) btn.classList.add('current');
+      const sample = words.slice(0, 3).join(', ');
+      btn.innerHTML = `
+        <span class="level-num">Lv ${k}</span>
+        <strong>${words.length} words</strong><br>
+        <small>${escapeHtml(sample)}…</small>
+      `;
+      btn.onclick = () => {
+        state.wordSource = 'psb';
+        state.psbLevel = k;
+        saveState();
+        renderWordlistSection();
+        startRound();
+      };
+      grid.appendChild(btn);
+    });
+  } else {
+    psbDiv.style.display = 'none';
+    label.innerHTML = `<strong>Standard</strong> (by age)`;
+  }
+}
+
+// Parse raw text (file contents or pasted text) into a { name, levels } list.
+// Accepts two formats:
+//   1. JSON: { name?, levels: { "2": [...], ... } }  (or a bare {levels} object)
+//   2. Plain text with "Level N" headings, e.g.
+//        Level 2
+//        abide accord acute, alcove
+//        Level 3
+//        abdomen, accomplished ...
+//      Words split on commas / whitespace / newlines.
+function parseWordlistText(text) {
+  text = (text || '').trim();
+  if (!text) throw new Error('nothing to load');
+
+  // Try JSON first
+  if (text[0] === '{' || text[0] === '[') {
+    const data = JSON.parse(text);
+    const src = data.levels && typeof data.levels === 'object' ? data.levels : data;
+    const levels = {};
+    let count = 0;
+    for (const rawKey of Object.keys(src)) {
+      const arr = src[rawKey];
+      if (!Array.isArray(arr)) continue;
+      const words = arr.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim());
+      if (!words.length) continue;
+      const m = String(rawKey).match(/\d+/);
+      levels[m ? m[0] : String(rawKey)] = (levels[m ? m[0] : String(rawKey)] || []).concat(words);
+      count += words.length;
+    }
+    if (!count) throw new Error('no words found in JSON');
+    return { name: data.name || data.source || 'Competition word list', levels, count };
+  }
+
+  // Plain text with "Level N" headings
+  const levels = {};
+  let current = '1', count = 0;
+  for (const rawLine of text.split('\n')) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const lvl = line.match(/^level\s*([0-9]+)/i);
+    if (lvl) { current = lvl[1]; if (!levels[current]) levels[current] = []; continue; }
+    const words = line.split(/[,\s]+/).map(w => w.trim()).filter(Boolean);
+    if (!words.length) continue;
+    levels[current] = (levels[current] || []).concat(words);
+    count += words.length;
+  }
+  if (!count) throw new Error('no words found — add "Level 2" style headings');
+  return { name: 'Competition word list', levels, count };
+}
+
+function applyImportedList(parsed) {
+  psbList = { name: parsed.name, levels: parsed.levels };
+  savePSBList(psbList);
+  state.wordSource = 'psb';
+  state.psbLevel = psbLevelKeys()[0];
+  saveState();
+  renderWordlistSection();
+  showImportFeedback(`✓ Loaded ${parsed.count} words across ${psbLevelKeys().length} levels. Tap a level to start.`);
+}
+
+// File import — stored ONLY in this browser, never uploaded.
+document.getElementById('import-list-btn').addEventListener('click', () => {
+  document.getElementById('import-file').click();
+});
+document.getElementById('import-file').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try { applyImportedList(parseWordlistText(reader.result)); }
+    catch (err) {
+      console.error('[spelling-bee] import failed', err);
+      showImportFeedback('Could not read that file: ' + err.message, true);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// Paste import — no file picker, works on any device.
+document.getElementById('paste-list-btn').addEventListener('click', () => {
+  const box = document.getElementById('paste-box');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  if (box.style.display === 'block') document.getElementById('paste-area').focus();
+});
+document.getElementById('cancel-paste-btn').addEventListener('click', () => {
+  document.getElementById('paste-box').style.display = 'none';
+  document.getElementById('paste-area').value = '';
+});
+document.getElementById('load-paste-btn').addEventListener('click', () => {
+  try {
+    applyImportedList(parseWordlistText(document.getElementById('paste-area').value));
+    document.getElementById('paste-box').style.display = 'none';
+    document.getElementById('paste-area').value = '';
+  } catch (err) {
+    console.error('[spelling-bee] paste import failed', err);
+    showImportFeedback('Could not read that: ' + err.message, true);
+  }
+});
+
+document.getElementById('use-standard-btn').addEventListener('click', () => {
+  state.wordSource = 'standard';
+  saveState();
+  renderWordlistSection();
+  renderLevels();
+  showImportFeedback('Switched to standard (age-based) words.');
+});
+
+document.getElementById('remove-list-btn').addEventListener('click', () => {
+  if (!confirm('Remove the imported competition word list from this device?')) return;
+  clearPSBList();
+  psbList = null;
+  state.wordSource = 'standard';
+  saveState();
+  renderWordlistSection();
+  showImportFeedback('Removed. Using standard words.');
+});
+
+// ============================================================
+// EVENTS
+// ============================================================
+document.getElementById('play-btn').addEventListener('click', () => {
+  speak(wordTextFor(round.words[round.index]));
+});
+document.getElementById('slower-btn').addEventListener('click', () => {
+  speak(wordTextFor(round.words[round.index]), { rate: 0.55 });
+});
+document.getElementById('sentence-btn').addEventListener('click', () => {
+  speak(sentenceFormFor(round.words[round.index]), { rate: state.rate });
+});
+document.getElementById('answer-form').addEventListener('submit', checkAnswer);
+
+document.getElementById('menu-btn').addEventListener('click', () => {
+  renderLevels();
+  renderWordlistSection();
+  document.getElementById('current-player').textContent =
+    state.name ? `${state.name} (age ${state.age || 7})` : `Age ${state.age || 7}`;
+  showScreen('level');
+});
+
+document.getElementById('next-round-btn').addEventListener('click', startRound);
+document.getElementById('level-up-btn').addEventListener('click', () => {
+  if (state.wordSource === 'psb') {
+    const keys = psbLevelKeys();
+    const idx = keys.indexOf(state.psbLevel);
+    if (idx >= 0 && idx < keys.length - 1) state.psbLevel = keys[idx + 1];
+  } else {
+    state.level = Math.min(state.level + 1, LEVEL_NAMES.length - 1);
+    if (state.level > state.highestLevel) state.highestLevel = state.level;
+  }
+  saveState();
+  startRound();
+});
+document.getElementById('see-stats-btn').addEventListener('click', () => {
+  renderStats();
+  showScreen('stats');
+});
+document.getElementById('see-leaderboard-btn').addEventListener('click', () => {
+  renderLeaderboard();
+  showScreen('leaderboard');
+});
+
+document.getElementById('back-from-stats').addEventListener('click', () => showScreen('game'));
+document.getElementById('back-from-level').addEventListener('click', () => showScreen('game'));
+
+document.getElementById('reset-btn').addEventListener('click', async () => {
+  if (!confirm('Reset ALL progress — local stats AND the shared leaderboard on the server. This cannot be undone.')) return;
+  // Reset local state (per-word stats, level, leaderboard, recent words, name+age stay so kid keeps playing)
+  const keepName = state.name;
+  const keepAge = state.age;
+  state = { ...defaultState, name: keepName, age: keepAge, migrationVersion: state.migrationVersion };
+  saveState();
+  // Wipe the shared leaderboard on the server (best effort — local reset
+  // still happens even if the DELETE fails)
+  try {
+    const res = await fetch('/api/leaderboard', { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('[spelling-bee] Server leaderboard reset returned', res.status, err);
+    } else {
+      console.info('[spelling-bee] Server leaderboard cleared');
+    }
+  } catch (e) {
+    console.warn('[spelling-bee] Server leaderboard reset network error', e);
+  }
+  // Clear IndexedDB audio cache so any test audio cached for old voice ids doesn't linger
+  await idbClear();
+  audioCache.clear();
+  renderStats();
+  renderLevels();
+  startRound();
+});
+
+document.getElementById('voice-select').addEventListener('change', e => {
+  state.voiceName = e.target.value;
+  saveState();
+  speak('G\'day! Let\'s spell.', {});
+});
+document.getElementById('rate-select').addEventListener('change', e => {
+  state.rate = parseFloat(e.target.value);
+  saveState();
+  speak('G\'day!');
+});
+
+// --- Welcome screen ---
+document.getElementById('start-from-welcome').addEventListener('click', () => {
+  const nameRaw = document.getElementById('name-input').value.trim();
+  if (!nameRaw) {
+    document.getElementById('name-input').focus();
+    document.getElementById('name-input').style.borderColor = '#ef4444';
+    return;
+  }
+  const v = parseInt(document.getElementById('age-input').value, 10);
+  const age = isNaN(v) ? 7 : Math.max(7, Math.min(16, v));
+  state.name = nameRaw.slice(0, 20);
+  state.age = age;
+  saveState();
+  // A new player session is a fresh start — clear any leftover Gemini
+  // rate-limit cooldown so the kid gets an AI voice attempt immediately
+  // instead of inheriting the previous session's fallback-to-native.
+  geminiThrottledUntil = 0;
+  geminiConsecutive429s = 0;
+  lastTTSError = null;
+  startRound();
+});
+
+// --- Leaderboard + Switch Player ---
+document.getElementById('open-leaderboard-btn').addEventListener('click', () => {
+  renderLeaderboard();
+  showScreen('leaderboard');
+});
+document.getElementById('back-from-leaderboard').addEventListener('click', () => showScreen('game'));
+
+document.getElementById('switch-player-btn').addEventListener('click', () => {
+  if (!confirm("Switch player? Scores stay saved in the leaderboard.")) return;
+  showScreen('welcome');
+  // Pre-fill so re-entering is fast for known kids
+  document.getElementById('name-input').value = '';
+  document.getElementById('name-input').style.borderColor = '';
+  document.getElementById('age-input').value = state.age || 7;
+  document.getElementById('name-input').focus();
+});
+
+// --- Age setting (mid-game adjustment) ---
+// Changing age shifts the difficulty pool but keeps the current level number.
+// E.g. Level 5 for age 7 ≠ Level 5 for age 10 — the words come from different pools.
+document.getElementById('age-setting').addEventListener('change', e => {
+  const v = parseInt(e.target.value, 10);
+  if (isNaN(v) || v < 7 || v > 16) {
+    e.target.value = state.age || 7;
+    return;
+  }
+  state.age = v;
+  saveState();
+  // Re-pick the current round's words from the new age's pool so going Back
+  // to game uses the new difficulty (the in-progress round otherwise has old words).
+  round = { words: pickRoundWords(), index: 0, correct: 0, results: [] };
+  document.getElementById('level-tag').textContent =
+    `Age ${state.age} · Lv ${state.level + 1}: ${LEVEL_NAMES[state.level]}`;
+  renderLevels();
+  if (state.useAI) ensurePrefetch();
+});
+
+// --- AI voice settings ---
+const useAIEl    = document.getElementById('use-ai');
+const voiceIdEl  = document.getElementById('voice-id');
+const aiStatusEl = document.getElementById('ai-status');
+
+// Populate voice select (Gemini AU first, then native browser voices)
+VOICE_OPTIONS.forEach(v => {
+  const opt = document.createElement('option');
+  opt.value = v.id;
+  opt.textContent = v.label;
+  voiceIdEl.appendChild(opt);
+});
+
+function refreshAIStatus() {
+  if (!state.useAI) {
+    aiStatusEl.textContent = 'Off';
+    aiStatusEl.style.color = '#78350f';
+    return;
+  }
+  const opt = findVoiceOption(state.aiVoiceId);
+  if (opt?.type === 'browser') {
+    const v = findNativeVoice(opt.match);
+    aiStatusEl.textContent = v ? `On (${v.name})` : 'On (no native AU — using Gemini)';
+    aiStatusEl.style.color = '#065f46';
+  } else if (opt?.type === 'gemini') {
+    aiStatusEl.textContent = lastTTSError ? 'On (server error)' : 'On (Gemini Achernar)';
+    aiStatusEl.style.color = lastTTSError ? '#991b1b' : '#065f46';
+  } else {
+    aiStatusEl.textContent = 'On';
+    aiStatusEl.style.color = '#065f46';
+  }
+}
+
+// Show only the relevant voice dropdown for the current useAI state.
+function updateVoiceUIVisibility() {
+  const aiRow = document.getElementById('ai-voice-row');
+  const browserRow = document.getElementById('browser-voice-row');
+  if (aiRow)      aiRow.style.display      = state.useAI ? '' : 'none';
+  if (browserRow) browserRow.style.display = state.useAI ? 'none' : '';
+}
+
+useAIEl.addEventListener('change', () => {
+  state.useAI = useAIEl.checked;
+  saveState();
+  refreshAIStatus();
+  updateVoiceUIVisibility();
+  if (state.useAI) {
+    showAIFeedback('Each word is fetched from Gemini and cached locally. Errors fall back to your device voice.');
+    ensurePrefetch();
+  } else {
+    showAIFeedback('Using device voice — no Gemini requests.');
+  }
+});
+
+voiceIdEl.addEventListener('change', async () => {
+  state.aiVoiceId = voiceIdEl.value || defaultState.aiVoiceId;
+  if (!state.useAI) {
+    state.useAI = true;
+    useAIEl.checked = true;
+  }
+  saveState();
+  audioCache.clear();
+  delete document.getElementById('ai-feedback').dataset.warned;
+  refreshAIStatus();
+  showAIFeedback('');
+
+  const opt = findVoiceOption(state.aiVoiceId);
+  console.info('[spelling-bee] Voice changed to', state.aiVoiceId, opt);
+
+  if (opt?.type === 'browser') {
+    const v = findNativeVoice(opt.match);
+    if (v) {
+      showAIFeedback(`✓ Voice ready: ${v.name} (${v.lang})`);
+      ensurePrefetch();
+      return;
+    }
+    showAIFeedback(`No native "${opt.match.nameHints[0]}" — will use Gemini Achernar instead.`);
+  }
+
+  // Gemini voice — pre-fetch the test phrase so the next Test voice click
+  // plays from cache instantly within the gesture window.
+  const voiceId = effectiveAIVoice();
+  if (!voiceId) {
+    showAIFeedback('No usable voice — pick au_female (uses Karen if installed).', true);
+    return;
+  }
+  showAIFeedback('Preparing test sample from Gemini…');
+  try {
+    await getAIAudio(TEST_PHRASE, voiceId);
+    showAIFeedback(`✓ ${voiceId} ready — tap 🔊 Test voice to hear it.`);
+    console.info('[spelling-bee] Pre-gen done for', voiceId);
+  } catch (e) {
+    console.error('[spelling-bee] Voice prepare failed:', e);
+    showAIFeedback('Voice prepare failed: ' + (e.message || e), true);
+  }
+  ensurePrefetch();
+});
+
+// Test Voice — dual-mode.
+//   "Use AI voice" OFF → tests the browser voice from the regular "Voice"
+//                        dropdown (state.voiceName), via speechSynthesis.
+//   "Use AI voice" ON  → tests Achernar via Gemini. First click fetches +
+//                        caches; second click plays (fresh user gesture).
+//
+// Importantly, Test no longer auto-toggles useAI on. The button reflects
+// what will actually play in the game given current settings.
+document.getElementById('test-voice').addEventListener('click', async () => {
+  await ensureVoicesLoaded();
+
+  // --- Browser-voice mode (AI off) ---
+  if (!state.useAI) {
+    const v = voices.find(x => x.name === state.voiceName) ||
+              voices.find(x => (x.lang || '').toLowerCase().startsWith('en-au')) ||
+              voices.find(x => (x.lang || '').toLowerCase().startsWith('en')) ||
+              voices[0];
+    if (!v) {
+      showAIFeedback('No browser voices available on this device.', true);
+      return;
+    }
+    console.info('[spelling-bee] Test (browser):', v.name, v.lang);
+    try {
+      const u = new SpeechSynthesisUtterance(TEST_PHRASE);
+      u.voice = v;
+      u.rate = Math.max(0.5, Math.min(2.0, state.rate || 1));
+      u.lang = v.lang;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+      showAIFeedback(`🔊 "${v.name}" (${v.lang}) — your device's voice.`);
+    } catch (e) {
+      console.error('[spelling-bee] Native play error:', e);
+      showAIFeedback('Play error: ' + (e.message || e), true);
+    }
+    return;
+  }
+
+  // --- AI mode (Gemini Achernar) ---
+  const opt = findVoiceOption(state.aiVoiceId);
+  console.info('[spelling-bee] Test (AI):', state.aiVoiceId, opt);
+
+  const voiceId = effectiveAIVoice();
+  if (!voiceId) {
+    showAIFeedback('No AI voice resolved. Pick one from the dropdown.', true);
+    return;
+  }
+  const cacheKey = `${voiceId}::${TEST_PHRASE}`;
+  let url = audioCache.get(cacheKey);
+
+  if (!url) {
+    try {
+      showAIFeedback('Fetching from Gemini…');
+      url = await getAIAudio(TEST_PHRASE, voiceId);
+      showAIFeedback(`✓ ${voiceId} ready — tap 🔊 Test voice once more.`);
+    } catch (e) {
+      console.error('[spelling-bee] Gemini fetch failed:', e);
+      showAIFeedback(formatTTSError(e), true);
+    }
+    return;
+  }
+
+  try {
+    console.info('[spelling-bee] Playing cached Gemini:', voiceId);
+    const audio = new Audio(url);
+    audio.volume = 1.0;
+    audio.playbackRate = Math.max(0.5, Math.min(2.0, state.rate || 1));
+    audio.addEventListener('error', () => console.error('[spelling-bee] Audio element error', audio.error));
+    audio.addEventListener('loadedmetadata', () => console.info('[spelling-bee] Audio metadata. duration =', audio.duration, 's'));
+    audio.addEventListener('ended', () => console.info('[spelling-bee] Audio ended'));
+    await audio.play();
+    showAIFeedback(`🔊 Achernar (Gemini AI).`);
+  } catch (e) {
+    console.error('[spelling-bee] Cached play failed:', e);
+    if (e.name === 'NotAllowedError') {
+      showAIFeedback('Autoplay blocked. Tap 🔊 Test voice again.', true);
+    } else {
+      showAIFeedback('Play error: ' + (e.message || e), true);
+    }
+  }
+});
+
+function formatTTSError(e) {
+  const msg = (e && e.message) || String(e);
+  if (msg.includes('429') || /rate.?limit/i.test(msg)) {
+    return 'Gemini rate limit (free tier ~3/min). Wait a moment, or enable billing on your Google Cloud project for higher quota.';
+  }
+  if (msg.includes('503')) {
+    return 'GEMINI_API_KEY not configured in Vercel. See Settings → Environment Variables.';
+  }
+  if (msg.includes('403')) {
+    return 'API key rejected (check it has access to gemini-3.1-flash-tts-preview).';
+  }
+  return 'Gemini error: ' + msg;
+}
+
+// Unlock the browser's audio playback policy on the first user interaction.
+// Lets later Audio.play() calls work even if they fire after async work
+// (e.g. Gemini fetch round-trip) that breaks the user-activation chain.
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try {
+    const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+    a.volume = 0.01;
+    a.play().catch(() => {});
+  } catch (e) {}
+}
+['click','touchstart','keydown'].forEach(ev =>
+  document.addEventListener(ev, unlockAudio, { once: true, passive: true })
+);
+
+// Keep voice list in sync if it loads late (some browsers)
+window.setTimeout(loadVoices, 500);
+
+// Initial values into form controls
+document.getElementById('rate-select').value = String(state.rate);
+document.getElementById('age-setting').value = state.age || 7;
+useAIEl.checked = state.useAI;
+voiceIdEl.value = state.aiVoiceId || defaultState.aiVoiceId;
+refreshAIStatus();
+updateVoiceUIVisibility();
+
+// Competition list bootstrap: if state says 'psb' but the list is gone
+// (removed, or different device), fall back to standard so nothing breaks.
+if (state.wordSource === 'psb' && (!psbList || !psbList.levels[state.psbLevel])) {
+  if (psbList && psbLevelKeys().length) {
+    state.psbLevel = psbLevelKeys()[0];   // list exists but level key stale
+  } else {
+    state.wordSource = 'standard';
+  }
+  saveState();
+}
+renderWordlistSection();
+
+// GO!
+if (state.age == null || !state.name) {
+  showScreen('welcome');
+  document.getElementById('name-input').value = state.name || '';
+  document.getElementById('age-input').value = state.age || 7;
+  // Focus the first empty field
+  setTimeout(() => {
+    const target = !state.name ? 'name-input' : 'age-input';
+    document.getElementById(target).focus();
+  }, 100);
+} else {
+  startRound();
+}
+
+// If AI voice was enabled in a previous session, warm the cache in the background.
+if (state.useAI) {
+  // Wait for browser voices to load so findNativeVoice works
+  setTimeout(() => ensurePrefetch(), 800);
+}
+</script>
+</body>
+</html>
