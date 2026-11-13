@@ -105,9 +105,20 @@ function readJSON(key) { try { return JSON.parse(read(key) || 'null'); } catch (
 // Add new games here — newest first.
 const GAMES = [
   {
+    file: 'great-wall-getaway.html', emoji: '🏎️', name: 'Great Wall Getaway',
+    desc: 'Rob banks in your super car, then war with the police at the Great Wall!',
+    bg: 'linear-gradient(160deg, #f97316, #7c2d12)', edge: '#431407', badge: 'NEW!',
+    progress() {
+      const lvl = parseInt(read('leo_getaway_unlocked') || '0', 10);
+      if (!lvl) return '';
+      const stars = Object.values(readJSON('leo_getaway_stars') || {}).reduce((a, b) => a + b, 0);
+      return 'Level ' + lvl + (stars ? ' · ⭐ ' + stars : '');
+    },
+  },
+  {
     file: 'barrier-battle.html', emoji: '🛡️', name: 'Barrier Battle',
     desc: 'Chop trees, fix your wall and smash the red barrier!',
-    bg: 'linear-gradient(160deg, #3b82f6, #dc2626)', edge: '#7f1d1d', badge: 'NEW!',
+    bg: 'linear-gradient(160deg, #3b82f6, #dc2626)', edge: '#7f1d1d',
     progress() {
       const lvl = parseInt(read('leo_barrier_unlocked') || '0', 10);
       if (!lvl) return '';
