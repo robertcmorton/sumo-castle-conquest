@@ -58,7 +58,8 @@ button:disabled { opacity: .35; }
     <div class="how">
       🌳 <b>Tap trees</b> to walk there and chop wood<br>
       🧱 <b>Stand by your wall</b> to fix it with wood &ndash; giant animals want to smash it!<br>
-      ⛏️ Miners dig gold &nbsp; 🛻 Trucks make you fast &nbsp; ⚔️🏹💣 Fighters attack<br>
+      ⛏️ Miners dig gold &nbsp; ⚔️🏹💣 Fighters attack &nbsp; 🪓 Lumberjacks chop &amp; fix your wall<br>
+      🛻 7 trucks to buy &ndash; each one costs more but is <b>faster and stronger</b><br>
       🏰 Your castle shoots <b>poison darts</b> and <b>bombs</b> &ndash; but their castle shoots <b>fire arrows</b> and <b>boulders</b> back!<br>
       🔴 <b>Smash every piece of the RED barrier</b> to win the level!
     </div>
@@ -136,16 +137,27 @@ const THEMES = [
   { name: 'Jungle',        g1: '#3f9a52', g2: '#348746', tree: '🌴', dirt: '#8a6a40' },
   { name: 'Volcano',       g1: '#6b5a52', g2: '#5c4b44', tree: '🌲', dirt: '#8b3a2a' },
 ];
-const HERO_SPD = [140, 210, 260, 320];
-const CHOP_TIME = [0.5, 0.4, 0.32, 0.25];
-const TRUCK_COST = [80, 180, 350];
-const TRUCK_EMO = ['', '🛻', '🚚', '🚛'];
-const TRUCK_NAME = ['Truck', 'Big Truck', 'Mega Truck'];
+// Trucks: each one costs more and is faster and stronger. Number 0 is walking.
+const TRUCKS = [
+  { name: 'On foot',       cost: 0,    spd: 140, chop: 0.5 },
+  { name: 'Pickup Truck',  cost: 80,   spd: 195, chop: 0.44, type: 'pickup',  color: '#2f6fd6', sc: 0.66 },
+  { name: 'Dump Truck',    cost: 160,  spd: 225, chop: 0.39, type: 'dump',    color: '#e8a317', sc: 0.7 },
+  { name: 'Fire Truck',    cost: 260,  spd: 255, chop: 0.35, type: 'fire',    color: '#c62828', sc: 0.74 },
+  { name: 'Big Rig',       cost: 400,  spd: 285, chop: 0.31, type: 'rig',     color: '#3b5b7a', sc: 0.78 },
+  { name: 'Army Truck',    cost: 580,  spd: 310, chop: 0.28, type: 'army',    color: '#4d5a2a', sc: 0.8 },
+  { name: 'Monster Truck', cost: 800,  spd: 335, chop: 0.25, type: 'monster', color: '#7c3aed', sc: 0.82 },
+  { name: 'Mega Truck',    cost: 1100, spd: 360, chop: 0.22, type: 'mega',    color: '#141821', sc: 0.88 },
+];
+const MAX_TRUCK = TRUCKS.length - 1;
+const HERO_SPD = TRUCKS.map(t => t.spd), CHOP_TIME = TRUCKS.map(t => t.chop);
+// Lumberjacks chop trees and fix your log wall all by themselves
+const JACK = { cost: 150, max: 6, hp: 70, spd: 78, carry: 12, chop: 0.6 };
 const SHOP = [
   { id: 'miner',   icon: '⛏️', name: 'Gold Miner' },
   { id: 'warrior', icon: '⚔️', name: 'Warrior' },
   { id: 'archer',  icon: '🏹', name: 'Archer' },
   { id: 'bomber',  icon: '💣', name: 'Bomber' },
+  { id: 'jack',    icon: '🪓', name: 'Lumberjack' },
   { id: 'truck',   icon: '🛻', name: 'Truck' },
 ];
 
@@ -445,7 +457,7 @@ function newGame(L, state) {
     blueWall: Array.from({ length: SEGS }, (_, i) => mkSeg(i, bwMax, 0.45)),
     redWall: Array.from({ length: SEGS }, (_, i) => mkSeg(i, rwMax, 1)),
     hero: { x: 230, y: 360, tx: null, ty: null, r: 16, hp: 150, max: 150, truck: 0, dead: 0, cd: 0, atk: 0, work: 0, face: 1, task: null, walk: 0, hit: 0, isHero: true },
-    units: [], miners: [], monsters: [], reds: [], towers: [], trees: [], projs: [], parts: [], texts: [],
+    units: [], miners: [], jacks: [], monsters: [], reds: [], towers: [], trees: [], projs: [], parts: [], texts: [],
     spawnT: 9, redT: 18, freeT: 5, bossDone: false, deny: {}, banner: null, shake: 0,
     chopped: false, repaired: false, bought: false, marker: null,
   };
@@ -535,7 +547,7 @@ function nearestSeg(wall, wx, e) {
 }
 function blueEnemies() { return G.monsters.concat(G.reds); }
 function blueTargets() {
-  const list = G.units.concat(G.miners);
+  const list = G.units.concat(G.miners, G.jacks);
   if (!G.hero.dead) list.push(G.hero);
   return list;
 }
@@ -638,9 +650,12 @@ function updHero(dt) {
   // Fight anything that gets close
   const foe = nearest(blueEnemies(), h.x, h.y, h.r + 22);
   if (foe && h.cd <= 0) {
-    damage(foe, (14 + h.truck * 5) * G.power); h.cd = 0.55; h.atk = 0.25; h.face = foe.x > h.x ? 1 : -1; sfx('hit');
+    damage(foe, (14 + h.truck * 6) * G.power); h.cd = 0.55; h.atk = 0.25; h.face = foe.x > h.x ? 1 : -1; sfx('hit');
   }
   h.task = null;
+  if (moving && h.truck > 0 && REAL > 0.25 && Math.random() < dt * 12) {
+    G.parts.push({ dust: true, x: h.x - h.face * 34 * TRUCKS[h.truck].sc, y: h.y + 14, vx: -h.face * rand(10, 30), vy: rand(-12, -4), g: 0, life: 0.8, max: 0.8, size: 4 + h.truck * 0.6, color: G.theme.dirt });
+  }
   if (moving) { h.work = 0; return; }
   // Fix the wall
   let fix = null;
@@ -670,6 +685,80 @@ function updHero(dt) {
       if (tr.hp <= 0) tr.regrow = tr.safe ? 45 : 25;
     }
   } else h.work = 0;
+}
+
+// ---------- Lumberjacks: chop trees, carry the logs, fix the wall ----------
+function addJack() {
+  const k = G.power;
+  G.jacks.push({ x: DOOR.x + rand(-8, 8), y: DOOR.y + rand(-6, 6), r: 12, hp: JACK.hp * k, max: JACK.hp * k, carry: 0, work: 0, cd: 0, atk: 0, hit: 0, face: 1, walk: 0, tree: null, isJack: true });
+}
+function updJack(j, dt) {
+  j.px = j.x; j.cd -= dt; j.atk = Math.max(0, j.atk - dt); j.hit = Math.max(0, j.hit - dt);
+  // Swing the axe at anything that gets too close
+  const foe = nearest(blueEnemies(), j.x, j.y, j.r + 18);
+  if (foe && j.cd <= 0) { damage(foe, 8 * G.power); j.cd = 0.8; j.atk = 0.25; j.face = foe.x > j.x ? 1 : -1; sfx('hit'); }
+  // Danger! Outside the wall with a monster or red soldier close by: run back home
+  const enemies = blueEnemies();
+  if (j.x > BW - 20 && nearest(enemies, j.x, j.y, 130)) {
+    moveToward(j, BW - 70, clamp(j.y, TOP + 30, BOT - 30), JACK.spd * 1.25, dt); j.work = 0; j.tree = null; return;
+  }
+  // Pick a tree: safe ones inside your wall first, then wild ones near the wall with no enemies around
+  const safeTree = t => t.hp > 0 && (t.safe || (t.x < BW + 260 && !nearest(enemies, t.x, t.y, 170)));
+  if (!j.tree || !safeTree(j.tree)) {
+    j.tree = null; let best = Infinity;
+    for (const t of G.trees) {
+      if (!safeTree(t)) continue;
+      const busy = G.jacks.filter(o => o !== j && o.tree === t).length;
+      const score = dist(j.x, j.y, t.x, t.y) + (t.safe ? 0 : 220) + busy * 120;
+      if (score < best) { best = score; j.tree = t; }
+    }
+  }
+  if (j.carry >= JACK.carry || (j.carry > 0 && !j.tree)) {
+    // Carry the logs to the most broken bit of wall and fix it
+    let seg = null;
+    for (const s of G.blueWall) if (s.hp < s.max && (!seg || s.hp / s.max < seg.hp / seg.max)) seg = s;
+    if (!seg) { G.wood += j.carry; floatText('+' + j.carry + ' 🪵', j.x, j.y - 24, '#fef3c7', 16); j.carry = 0; return; }
+    const tx = BW - 24, ty = clamp(j.y, seg.y0 + 12, seg.y1 - 12);
+    if (dist(j.x, j.y, tx, ty) > 6) { moveToward(j, tx, ty, JACK.spd, dt); j.work = 0; return; }
+    j.face = 1; j.work += dt;
+    if (j.work >= 0.25) {
+      j.work = 0; j.atk = 0.2; j.carry--; seg.hp = Math.min(seg.max, seg.hp + seg.max * 0.08);
+      if (Math.random() < 0.5) burst(BW, ty, '#d97706', 3, 80, 4);
+      if (seg.hp >= seg.max) floatText('Fixed! 🧱', BW, seg.yc, '#bbf7d0', 18);
+    }
+    return;
+  }
+  if (!j.tree) {
+    // Nothing safe to chop: if the wall needs fixing, fetch logs from your wood pile at the castle
+    if (G.wood >= 3 && G.blueWall.some(s => s.hp < s.max)) {
+      if (dist(j.x, j.y, DOOR.x, DOOR.y) > 10) { moveToward(j, DOOR.x, DOOR.y, JACK.spd, dt); return; }
+      const take = Math.min(JACK.carry, G.wood); G.wood -= take; j.carry = take;
+      floatText('-' + take + ' 🪵', j.x, j.y - 24, '#fde68a', 14);
+      return;
+    }
+    // otherwise wait behind the wall
+    if (dist(j.x, j.y, BW - 70, j.y) > 6) moveToward(j, BW - 70, clamp(j.y, TOP + 30, BOT - 30), JACK.spd, dt);
+    return;
+  }
+  const t = j.tree, side = j.x < t.x ? -1 : 1, tx = t.x + side * 22, ty = t.y + 8;
+  if (dist(j.x, j.y, tx, ty) > 6) { moveToward(j, tx, ty, JACK.spd, dt); j.work = 0; return; }
+  j.face = -side; j.work += dt;
+  if (j.work >= JACK.chop) {
+    j.work = 0; j.atk = 0.25; t.hp--; t.shake = 0.25; j.carry = Math.min(JACK.carry, j.carry + 3);
+    sfx('chop'); burst(t.x, t.y + 10, '#a16207', 4, 110, 4);
+    if (t.hp <= 0) { t.regrow = t.safe ? 45 : 25; j.tree = null; }
+  }
+}
+function drawJack(j) {
+  drawPerson(j, '#0f766e', '#9a3412', 'axe');
+  // logs strapped to their back
+  const logs = Math.ceil(j.carry / 3);
+  for (let i = 0; i < logs; i++) {
+    const lx = j.x - j.face * 9, ly = j.y - 6 - i * 4;
+    ctx.fillStyle = '#7c4a24'; rr(lx - 7, ly - 2, 14, 4, 2); ctx.fill();
+    circle(lx + 7 * -j.face, ly, 2, '#d6a65a');
+  }
+  hpBar(j, 26, 26);
 }
 
 function updBlue(u, dt) {
@@ -901,6 +990,7 @@ function update(dt) {
       if (m.t <= 0) { const amt = Math.round(3 * Math.sqrt(g.f)); m.t = 2.2; m.atk = 0.3; g.gold += amt; floatText('+' + amt, m.x, m.y - 20, '#fde047', 15); burst(MINE.x, MINE.y, '#facc15', 2, 60, 3); }
     }
     for (const u of g.units) updBlue(u, dt);
+    for (const j of g.jacks) updJack(j, dt);
     for (const m of g.monsters) updAttacker(m, dt, m.spd, 6, 1.2, m.dmg, false);
     for (const r of g.reds) updAttacker(r, dt, r.s.spd, r.s.range, r.s.cd, r.dmg, !!r.s.shot);
     for (const t of g.towers) if (!t.gone) updTower(t, dt);
@@ -937,6 +1027,7 @@ function update(dt) {
   g.projs = g.projs.filter(p => !p.dead);
   g.units = g.units.filter(u => !u.dead);
   g.miners = g.miners.filter(u => !u.dead);
+  g.jacks = g.jacks.filter(u => !u.dead);
   g.monsters = g.monsters.filter(u => !u.dead);
   g.reds = g.reds.filter(u => !u.dead);
 
@@ -953,7 +1044,7 @@ function update(dt) {
 // Keep everyone from standing inside each other, and keep walls solid
 function separate() {
   const g = G;
-  const list = g.units.concat(g.monsters, g.reds);
+  const list = g.units.concat(g.jacks, g.monsters, g.reds);
   if (!g.hero.dead) list.push(g.hero);
   for (let i = 0; i < list.length; i++) {
     const a = list[i];
@@ -1008,16 +1099,18 @@ function endLevel(won) {
 // ---------- Shop ----------
 function costOf(id) {
   if (id === 'miner') return 25 + G.miners.length * 10;
-  if (id === 'truck') return G.hero.truck < 3 ? TRUCK_COST[G.hero.truck] : Infinity;
+  if (id === 'truck') return G.hero.truck < MAX_TRUCK ? TRUCKS[G.hero.truck + 1].cost : Infinity;
+  if (id === 'jack') return JACK.cost;
   return BLUE[id].cost;
 }
 function shopRects() {
-  const gap = 10, x0 = 14, w = (W - 28 - gap * 4) / 5, y = SHOP_Y + 7, h = H - SHOP_Y - 14;
+  const n = SHOP.length, gap = 8, x0 = 12, w = (W - 24 - gap * (n - 1)) / n, y = SHOP_Y + 7, h = H - SHOP_Y - 14;
   return SHOP.map((it, i) => ({ it, x: x0 + i * (w + gap), y, w, h }));
 }
 function canBuy(id) {
   if (id === 'miner' && G.miners.length >= MAX_MINERS) return false;
-  if (id === 'truck' && G.hero.truck >= 3) return false;
+  if (id === 'truck' && G.hero.truck >= MAX_TRUCK) return false;
+  if (id === 'jack' && G.jacks.length >= JACK.max) return false;
   if (BLUE[id] && G.units.length >= MAX_UNITS) return false;
   return G.gold >= costOf(id);
 }
@@ -1026,7 +1119,11 @@ function buy(id) {
   if (!canBuy(id)) { G.deny[id] = 0.3; sfx('no'); return; }
   G.gold -= costOf(id); G.bought = true; sfx('buy');
   if (id === 'miner') { addMiner(); const m = G.miners[G.miners.length - 1]; floatText('New miner!', m.x, m.y - 24, '#fde047', 18); }
-  else if (id === 'truck') { G.hero.truck++; floatText(TRUCK_NAME[G.hero.truck - 1] + '! Vroom!', G.hero.x, G.hero.y - 36, '#bfdbfe', 22); }
+  else if (id === 'truck') {
+    const h = G.hero; h.truck++; h.max += 35; h.hp = Math.min(h.max, h.hp + 35);
+    floatText(TRUCKS[h.truck].name + '! Vroom!', h.x, h.y - 40, '#bfdbfe', 22);
+  }
+  else if (id === 'jack') { addJack(); floatText('Lumberjack ready! 🪓', DOOR.x, DOOR.y - 24, '#bbf7d0', 18); }
   else { spawnBlue(id, false); }
 }
 
@@ -1364,6 +1461,225 @@ function drawMonster(m) {
   if (m.poison) drawPoisoned(m);
   hpBar(m, Math.max(36, m.r * 1.6), m.r * 1.1 + (m.boss ? 30 : 8));
 }
+// ---------- Trucks: painted side-on, facing right. Cartoon on level 1, more realistic every level ----------
+// Sprite coordinates: 100 x 64, wheels sit on y = 60. `win` is the cab window the driver shows through.
+const TRUCK_SHAPES = {
+  pickup:  { wheels: [[24, 8], [78, 8]],                   win: [62, 25, 13, 8] },
+  dump:    { wheels: [[20, 9], [42, 9], [80, 9]],          win: [71, 22, 17, 10] },
+  fire:    { wheels: [[18, 9], [40, 9], [82, 9]],          win: [75, 21, 16, 10] },
+  rig:     { wheels: [[12, 8], [30, 8], [68, 9], [88, 9]], win: [67, 16, 17, 11] },
+  army:    { wheels: [[20, 9], [40, 9], [82, 9]],          win: [71, 26, 16, 9] },
+  monster: { wheels: [[22, 15], [80, 15]],                 win: [62, 11, 13, 8], lift: 14 },
+  mega:    { wheels: [[18, 12], [46, 12], [82, 12]],       win: [68, 17, 16, 9] },
+};
+const trCache = new Map();
+function paintTruck(tier) {
+  const key = tier + '|' + RTIER;
+  if (trCache.has(key)) return trCache.get(key);
+  const T = TRUCKS[tier], sh = TRUCK_SHAPES[T.type], k = REAL, cartoon = k < 0.15;
+  const S = 3, c = document.createElement('canvas'); c.width = 100 * S; c.height = 64 * S;
+  const t = c.getContext('2d', { willReadFrequently: true }); t.scale(S, S);
+  const rnd = mulberry32(tier * 53 + 1);
+  t.lineJoin = 'round';
+  const outline = () => { if (cartoon) { t.strokeStyle = 'rgba(0,0,0,.8)'; t.lineWidth = 1.1; t.stroke(); } };
+  const shade = (y, h, col) => {
+    if (cartoon) return col;
+    const g = t.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, shadeHex(col, 0.28 * (0.5 + k))); g.addColorStop(0.45, col); g.addColorStop(1, shadeHex(col, -0.4 * (0.5 + k)));
+    return g;
+  };
+  const panel = (x, y, w, h, col, r) => {
+    rr2(t, x, y, w, h, r === undefined ? 2 : r); t.fillStyle = shade(y, h, col); t.fill(); outline();
+    if (!cartoon) { t.fillStyle = 'rgba(255,255,255,' + (0.15 + 0.2 * k) + ')'; t.fillRect(x + 1.5, y + 0.7, w - 3, 0.8); }
+  };
+  const shape = (pts, col) => {
+    let y0 = 99, y1 = 0; for (const p of pts) { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+    t.beginPath(); t.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) t.lineTo(pts[i][0], pts[i][1]); t.closePath();
+    t.fillStyle = shade(y0, y1 - y0, col); t.fill(); outline();
+  };
+  const chrome = (x, y, w, h) => {
+    if (cartoon) t.fillStyle = '#cbd5e1';
+    else { const g = t.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#f8fafc'); g.addColorStop(0.5, '#94a3b8'); g.addColorStop(1, '#e2e8f0'); t.fillStyle = g; }
+    rr2(t, x, y, w, h, Math.min(1.5, h / 2)); t.fill(); outline();
+  };
+  const glass = (pts) => {
+    t.beginPath(); t.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) t.lineTo(pts[i][0], pts[i][1]); t.closePath();
+    if (cartoon) t.fillStyle = '#bfe3f7';
+    else { const g = t.createLinearGradient(pts[0][0], pts[0][1], pts[2][0], pts[2][1]); g.addColorStop(0, '#dbeefb'); g.addColorStop(0.5, '#6f97b8'); g.addColorStop(1, '#2a3f52'); t.fillStyle = g; }
+    t.fill(); t.strokeStyle = '#111827'; t.lineWidth = 1; t.stroke();
+  };
+  const lamp = (x, y, r, col) => { t.fillStyle = col; t.beginPath(); t.arc(x, y, r, 0, Math.PI * 2); t.fill(); if (!cartoon) { t.fillStyle = 'rgba(255,255,255,.8)'; t.beginPath(); t.arc(x - r * 0.3, y - r * 0.3, r * 0.35, 0, Math.PI * 2); t.fill(); } };
+  const doorLines = (x, y, w, h) => { if (cartoon) return; t.strokeStyle = 'rgba(0,0,0,.4)'; t.lineWidth = 0.5; t.strokeRect(x, y, w, h); t.fillStyle = '#d1d5db'; t.fillRect(x + w - 4, y + 3, 2.5, 0.9); };
+  const col = T.color;
+  const wheelWells = (lift) => { for (const [wx, wr] of sh.wheels) { t.fillStyle = '#0b0b0b'; t.beginPath(); t.arc(wx, 60 - wr, wr + 1.8, Math.PI, 0); t.fill(); } };
+  const pickupBody = (bodyCol) => {
+    // logs riding in the back
+    for (const [lx, ly] of [[14, 31], [22, 31], [30, 31], [18, 27], [26, 27]]) { t.fillStyle = '#6b4423'; t.beginPath(); t.arc(lx, ly, 3.4, 0, Math.PI * 2); t.fill(); t.fillStyle = '#d6a65a'; t.beginPath(); t.arc(lx, ly, 2.4, 0, Math.PI * 2); t.fill(); }
+    panel(5, 32, 54, 16, bodyCol);
+    t.fillStyle = 'rgba(0,0,0,.45)'; t.fillRect(7, 32, 50, 1.8);
+    shape([[57, 48], [57, 22], [72, 22], [80, 32], [97, 34], [98, 48]], bodyCol);
+    glass([[60, 25], [71, 25], [77, 32], [60, 32]]);
+    doorLines(59, 33, 17, 13);
+    lamp(96.5, 37.5, 1.8, '#fff7cc'); lamp(6.5, 36, 1.4, '#ef4444');
+    chrome(94, 44, 5, 4); chrome(3, 44, 4, 4);
+    if (!cartoon) { t.fillStyle = '#111'; t.fillRect(56, 26, 2, 4); } // mirror
+  };
+  t.fillStyle = '#1f2937'; t.fillRect(6, 46 - (sh.lift || 0), 90, 4); // chassis
+  switch (T.type) {
+    case 'pickup': pickupBody(col); wheelWells(); break;
+    case 'dump': {
+      const box = '#8a8f98';
+      shape([[3, 13], [64, 13], [61, 46], [8, 46]], box);
+      t.strokeStyle = 'rgba(0,0,0,.35)'; t.lineWidth = 0.8;
+      for (let x = 12; x < 60; x += 8) { t.beginPath(); t.moveTo(x, 14); t.lineTo(x - 0.6, 45); t.stroke(); }
+      chrome(3, 12, 61, 2.2);
+      // a pile of dirt and logs poking out of the top
+      t.fillStyle = '#7a5a36'; t.beginPath(); t.moveTo(6, 13); t.quadraticCurveTo(30, 2, 62, 13); t.closePath(); t.fill();
+      panel(64, 17, 32, 31, col, 3);
+      glass([[70, 21], [90, 21], [90, 32], [70, 32]]);
+      doorLines(66, 33, 18, 13);
+      chrome(91, 34, 5, 9); lamp(95, 31, 1.8, '#fff7cc'); chrome(94, 44, 5, 4);
+      if (!cartoon) { t.fillStyle = '#111'; t.fillRect(96, 20, 2.4, 6); }
+      wheelWells(); break;
+    }
+    case 'fire': {
+      panel(3, 20, 70, 30, col, 3);
+      panel(68, 15, 29, 35, col, 3);
+      glass([[74, 19], [93, 19], [93, 31], [74, 31]]);
+      t.fillStyle = '#f8fafc'; t.fillRect(3, 39, 94, 2.4);
+      for (let i = 0; i < 3; i++) { const x = 7 + i * 20; chrome(x, 23, 17, 13); t.strokeStyle = 'rgba(0,0,0,.25)'; t.lineWidth = 0.4; for (let y = 25; y < 36; y += 1.6) { t.beginPath(); t.moveTo(x + 1, y); t.lineTo(x + 16, y); t.stroke(); } }
+      // ladder on the roof
+      t.strokeStyle = cartoon ? '#9ca3af' : '#cbd5e1'; t.lineWidth = 1.1;
+      t.beginPath(); t.moveTo(4, 13); t.lineTo(70, 13); t.moveTo(4, 17); t.lineTo(70, 17); t.stroke();
+      for (let x = 6; x < 70; x += 4.5) { t.beginPath(); t.moveTo(x, 13); t.lineTo(x, 17); t.stroke(); }
+      t.fillStyle = '#ef4444'; t.fillRect(74, 12, 9, 3); t.fillStyle = '#60a5fa'; t.fillRect(84, 12, 9, 3); // light bar
+      lamp(96, 36, 1.8, '#fff7cc'); chrome(93, 45, 6, 4);
+      t.fillStyle = '#3f3f46'; t.beginPath(); t.arc(64, 44, 4, 0, Math.PI * 2); t.fill(); // hose reel
+      wheelWells(); break;
+    }
+    case 'rig': {
+      panel(0, 7, 60, 39, '#e5e7eb', 2);
+      t.strokeStyle = 'rgba(0,0,0,.18)'; t.lineWidth = 0.5;
+      for (let x = 3; x < 60; x += 3) { t.beginPath(); t.moveTo(x, 8); t.lineTo(x, 45); t.stroke(); }
+      t.font = 'bold 7px ' + FONT; t.textAlign = 'center'; t.textBaseline = 'middle';
+      t.fillStyle = '#1d4ed8'; t.fillText("LEO'S LOGS", 30, 22); t.font = 'bold 9px ' + FONT; t.fillText('🪵', 30, 33);
+      t.fillStyle = '#111827'; t.fillRect(0, 46, 60, 3);
+      shape([[86, 27], [99, 31], [99, 48], [86, 48]], col);
+      panel(62, 10, 26, 38, col, 3);
+      glass([[66, 15], [84, 15], [84, 27], [66, 27]]);
+      doorLines(64, 29, 18, 16);
+      chrome(86, 1, 2.6, 27); // exhaust stack
+      chrome(96, 33, 3, 12); lamp(98, 30, 1.6, '#fff7cc');
+      chrome(66, 43, 15, 5); // fuel tank
+      wheelWells(); break;
+    }
+    case 'army': {
+      // canvas cover over the back
+      rr2(t, 4, 12, 58, 34, 9); t.fillStyle = shade(12, 34, '#7b7a4a'); t.fill(); outline();
+      t.strokeStyle = 'rgba(0,0,0,.3)'; t.lineWidth = 0.7;
+      for (let x = 12; x < 60; x += 8) { t.beginPath(); t.moveTo(x, 13); t.lineTo(x, 45); t.stroke(); }
+      panel(62, 22, 22, 26, col, 2);
+      shape([[82, 30], [98, 32], [98, 48], [82, 48]], col);
+      glass([[68, 25], [82, 25], [82, 33], [68, 33]]);
+      // camouflage blotches
+      for (let i = 0; i < 14; i++) { t.fillStyle = ['#3a4520', '#6b6a3a', '#2f3518'][i % 3]; t.beginPath(); t.ellipse(8 + rnd() * 88, 18 + rnd() * 28, 2 + rnd() * 3.5, 1.5 + rnd() * 2, rnd() * 3, 0, Math.PI * 2); t.fill(); }
+      // white star on the door
+      t.fillStyle = '#f1f5f9'; t.beginPath();
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 1.6 : 4; t.lineTo(74 + Math.cos(a) * r, 40 + Math.sin(a) * r); }
+      t.closePath(); t.fill();
+      lamp(96.5, 35, 1.7, '#fff7cc'); chrome(94, 44, 5, 4);
+      wheelWells(); break;
+    }
+    case 'monster': {
+      t.save(); t.translate(0, -sh.lift); pickupBody(col);
+      // flame stripe
+      t.fillStyle = '#facc15'; t.beginPath(); t.moveTo(58, 42); t.quadraticCurveTo(70, 36, 92, 40); t.quadraticCurveTo(76, 41, 70, 44); t.quadraticCurveTo(64, 42, 58, 46); t.closePath(); t.fill();
+      t.restore();
+      // big suspension under the raised body
+      for (const [wx, wr] of sh.wheels) { chrome(wx - 1.5, 34, 3, 60 - wr - 34); t.strokeStyle = '#f97316'; t.lineWidth = 1.2; for (let y = 36; y < 60 - wr - 1; y += 2) { t.beginPath(); t.moveTo(wx - 3, y); t.lineTo(wx + 3, y + 1); t.stroke(); } }
+      break;
+    }
+    case 'mega': {
+      shape([[3, 46], [3, 26], [14, 22], [64, 22], [74, 13], [90, 15], [98, 30], [99, 46]], col);
+      glass([[73, 16], [89, 17], [94, 28], [68, 28]]);
+      // flames down the side
+      const fg = t.createLinearGradient(10, 0, 70, 0); fg.addColorStop(0, '#dc2626'); fg.addColorStop(0.5, '#f97316'); fg.addColorStop(1, '#facc15');
+      t.fillStyle = fg; t.beginPath(); t.moveTo(70, 36);
+      for (let i = 0; i < 6; i++) { const x = 66 - i * 9; t.quadraticCurveTo(x - 2, 29 - (i % 2) * 3, x - 6, 33); t.quadraticCurveTo(x - 6, 38, x - 9, 36); }
+      t.lineTo(14, 44); t.lineTo(70, 44); t.closePath(); t.fill();
+      chrome(3, 41, 96, 1.6);
+      chrome(2, 16, 14, 3); t.fillStyle = '#111'; t.fillRect(5, 19, 2, 4); t.fillRect(11, 19, 2, 4); // spoiler
+      chrome(75, 10, 13, 3); lamp(77, 11.5, 1.2, '#fde047'); lamp(81.5, 11.5, 1.2, '#fde047'); lamp(86, 11.5, 1.2, '#fde047');
+      chrome(0, 43, 8, 2.5); chrome(0, 46.5, 8, 2.5); // twin exhausts
+      lamp(97, 34, 2, '#bfdbfe'); chrome(95, 44, 5, 4);
+      wheelWells(); break;
+    }
+  }
+  // Mud, scratches and grain the more realistic the level is
+  if (k > 0.35) {
+    for (let i = 0; i < 70 * k; i++) {
+      const x = 4 + rnd() * 94, y = 40 + rnd() * 10 - (sh.lift || 0);
+      t.fillStyle = 'rgba(' + (95 + rnd() * 35) + ',' + (70 + rnd() * 20) + ',40,' + (0.15 + rnd() * 0.3) + ')';
+      t.beginPath(); t.arc(x, y, 0.3 + rnd() * 0.9, 0, Math.PI * 2); t.fill();
+    }
+  }
+  if (k > 0.2) {
+    const img = t.getImageData(0, 0, c.width, c.height), d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] === 0) continue;
+      const n = (rnd() - 0.5) * 18 * k;
+      d[i] = clamp(d[i] + n, 0, 255); d[i + 1] = clamp(d[i + 1] + n, 0, 255); d[i + 2] = clamp(d[i + 2] + n, 0, 255);
+    }
+    t.putImageData(img, 0, 0);
+  }
+  trCache.set(key, c);
+  return c;
+}
+function drawWheel(x, y, r, ang, type) {
+  const k = REAL;
+  circle(x, y, r, '#151515');
+  if (k > 0.3) { // tread
+    ctx.fillStyle = '#2a2a2a';
+    for (let i = 0; i < 14; i++) { const a = ang + i * Math.PI / 7; ctx.save(); ctx.translate(x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9); ctx.rotate(a); ctx.fillRect(-r * 0.12, -r * 0.08, r * 0.24, r * 0.16); ctx.restore(); }
+  }
+  const rr_ = r * 0.56;
+  if (k < 0.15) circle(x, y, rr_, type === 'monster' ? '#facc15' : '#9ca3af');
+  else {
+    const g = ctx.createRadialGradient(x - rr_ * 0.3, y - rr_ * 0.3, 0, x, y, rr_);
+    g.addColorStop(0, type === 'monster' ? '#fef08a' : '#f8fafc'); g.addColorStop(1, type === 'monster' ? '#a16207' : '#64748b');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rr_, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = Math.max(0.6, r * 0.09);
+  for (let i = 0; i < 5; i++) { const a = ang + i * Math.PI * 2 / 5; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * rr_ * 0.25, y + Math.sin(a) * rr_ * 0.25); ctx.lineTo(x + Math.cos(a) * rr_ * 0.9, y + Math.sin(a) * rr_ * 0.9); ctx.stroke(); }
+  if (type === 'mega') { // spiky hubs
+    ctx.fillStyle = '#e2e8f0';
+    for (let i = 0; i < 3; i++) { const a = ang + i * Math.PI * 2 / 3; ctx.beginPath(); ctx.moveTo(x + Math.cos(a + 0.5) * rr_ * 0.3, y + Math.sin(a + 0.5) * rr_ * 0.3); ctx.lineTo(x + Math.cos(a) * rr_ * 1.25, y + Math.sin(a) * rr_ * 1.25); ctx.lineTo(x + Math.cos(a - 0.5) * rr_ * 0.3, y + Math.sin(a - 0.5) * rr_ * 0.3); ctx.fill(); }
+  }
+  circle(x, y, r * 0.16, '#e5e7eb');
+}
+// Draws a truck with its bottom at (x, groundY). roll turns the wheels. driver = show the hero in the cab.
+function drawTruck(tier, x, groundY, face, roll, driver) {
+  const T = TRUCKS[tier], sh = TRUCK_SHAPES[T.type], sc = T.sc;
+  softShadow(x + 4, groundY, 46 * sc, 7, .28);
+  ctx.save(); ctx.translate(x, groundY); ctx.scale(face * sc, sc);
+  ctx.drawImage(paintTruck(tier), -50, -60, 100, 64);
+  if (driver) {
+    const [wx, wy, ww, wh] = sh.win, hx = wx + ww * 0.45 - 50, hy = wy + wh * 0.62 - 60;
+    circle(hx, hy, 3.6, '#f2c9a0');
+    ctx.fillStyle = '#1d4ed8'; ctx.beginPath(); ctx.arc(hx, hy - 0.8, 3.9, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = 'rgba(200,225,245,.28)'; ctx.fillRect(wx - 50, wy - 60, ww, wh); // glass in front of the driver
+  }
+  for (const [wx, wr] of sh.wheels) drawWheel(wx - 50, -wr, wr, roll / wr, T.type);
+  ctx.restore();
+}
+function drawTruckIcon(tier, cx, cy, width) {
+  const T = TRUCKS[tier], sh = TRUCK_SHAPES[T.type], s = width / 100;
+  ctx.save(); ctx.translate(cx, cy + 16 * s); ctx.scale(s, s);
+  ctx.drawImage(paintTruck(tier), -50, -60, 100, 64);
+  for (const [wx, wr] of sh.wheels) drawWheel(wx - 50, -wr, wr, 0, T.type);
+  ctx.restore();
+}
+
 function drawHero(h) {
   if (h.dead) {
     ctx.globalAlpha = 0.5 + 0.3 * Math.sin(G.t * 8);
@@ -1373,13 +1689,11 @@ function drawHero(h) {
     return;
   }
   if (h.truck > 0 && h.task === null) {
-    const bob = Math.abs(Math.sin(h.walk * 16)) * 2 * (1 - 0.7 * REAL);
-    softShadow(h.x, h.y + 18, 30, 8, .25);
-    drawEmo(TRUCK_EMO[h.truck], h.x, h.y - bob, 44 + h.truck * 6, h.face > 0, undefined, true);
-    circle(h.x + h.face * 10, h.y - 22 - bob, 7, '#ffd9b3');
-    ctx.fillStyle = '#1d4ed8'; ctx.beginPath(); ctx.arc(h.x + h.face * 10, h.y - 24 - bob, 7.5, Math.PI, 0); ctx.fill();
+    const bob = Math.abs(Math.sin(h.walk * 16)) * 1.5 * (1 - 0.7 * REAL);
+    drawTruck(h.truck, h.x, h.y + 16 - bob, h.face, h.walk * HERO_SPD[h.truck], true);
   } else {
-    if (h.truck > 0) { softShadow(h.x - h.face * 34, h.y + 14, 22, 6, .2); drawEmo(TRUCK_EMO[h.truck], h.x - h.face * 34, h.y, 36 + h.truck * 4, h.face > 0, undefined, true); }
+    // parked next to the hero while they chop or build
+    if (h.truck > 0) drawTruck(h.truck, h.x - h.face * 50 * TRUCKS[h.truck].sc, h.y + 14, h.face, 0, false);
     drawPerson(h, '#1d4ed8', '#facc15', 'axe');
   }
   // Star above the hero so kids can always find themselves
@@ -1675,6 +1989,7 @@ function render() {
   list.push({ y: CASTLE.y + 50, f: drawCastle });
   for (const t of G.towers) list.push({ y: t.y + 20, f: () => drawTower(t) });
   for (const m of G.miners) list.push({ y: m.y, f: () => drawMiner(m) });
+  for (const j of G.jacks) list.push({ y: j.y, f: () => drawJack(j) });
   for (const u of G.units) list.push({ y: u.y, f: () => { drawPerson(u, u.free ? '#3b82f6' : '#2563eb', u.type === 'bomber' ? '#111827' : u.type === 'archer' ? '#15803d' : '#94a3b8', u.s.weapon); hpBar(u, 26, 26); } });
   for (const r of G.reds) list.push({ y: r.y, f: () => { drawPerson(r, '#dc2626', r.type === 'brute' ? '#7f1d1d' : r.type === 'archer' ? '#92400e' : '#4b5563', r.s.weapon, r.type === 'brute' ? 1.1 : 1); if (r.poison) drawPoisoned(r); hpBar(r, 26, r.r + 14); } });
   for (const m of G.monsters) list.push({ y: m.y + m.r * 0.6, f: () => drawMonster(m) });
@@ -1775,7 +2090,7 @@ function drawHint() {
   if (!G.chopped) msg = '👆 Tap a tree 🌳 to walk there and chop wood!';
   else if (!G.repaired) msg = '🪵 Now stand next to your wooden wall to fix it!';
   else if (!G.bought) msg = '⚔️ Buy fighters at the bottom to smash the RED barrier!';
-  else if (G.t < 140) msg = '🛻 Buy a truck to go faster. Break ALL the red wall to win!';
+  else if (G.t < 140) msg = '🪓 Lumberjacks fix your wall for you. 🛻 Trucks make you faster!';
   if (!msg) return;
   ctx.font = 'bold 22px ' + FONT;
   const w = ctx.measureText(msg).width + 40;
@@ -1809,18 +2124,22 @@ function drawShop() {
   ctx.fillStyle = 'rgba(15,23,42,.92)'; ctx.fillRect(0, SHOP_Y, W, H - SHOP_Y);
   shopRects().forEach(({ it, x, y, w, h }, i) => {
     const cost = costOf(it.id), ok = canBuy(it.id);
-    const maxed = (it.id === 'truck' && G.hero.truck >= 3) || (it.id === 'miner' && G.miners.length >= MAX_MINERS);
+    const maxed = (it.id === 'truck' && G.hero.truck >= MAX_TRUCK) || (it.id === 'miner' && G.miners.length >= MAX_MINERS) || (it.id === 'jack' && G.jacks.length >= JACK.max);
     const dx = G.deny[it.id] > 0 ? Math.sin(G.deny[it.id] * 60) * 4 : 0;
     rr(x + dx, y, w, h, 14);
-    ctx.fillStyle = ok ? (it.id === 'truck' ? '#0e7490' : it.id === 'miner' ? '#a16207' : '#1d4ed8') : '#334155'; ctx.fill();
+    ctx.fillStyle = ok ? (it.id === 'truck' ? '#0e7490' : it.id === 'miner' ? '#a16207' : it.id === 'jack' ? '#15803d' : '#1d4ed8') : '#334155'; ctx.fill();
     ctx.globalAlpha = ok ? 1 : 0.55;
-    const icon = it.id === 'truck' ? (TRUCK_EMO[Math.min(3, G.hero.truck + 1)] || '🚛') : it.icon;
-    drawEmo(icon, x + dx + 36, y + h / 2, 36);
-    const name = it.id === 'truck' ? (maxed ? 'Mega Truck' : TRUCK_NAME[G.hero.truck]) : it.name;
-    text(name, x + dx + 66, y + 22, 19, '#fff', 'left');
-    text(maxed ? 'MAX!' : '🪙 ' + cost, x + dx + 66, y + 46, 17, ok ? '#fde047' : '#cbd5e1', 'left');
+    if (it.id === 'truck') drawTruckIcon(Math.min(MAX_TRUCK, G.hero.truck + 1), x + dx + 34, y + h / 2 + 4, 56);
+    else drawEmo(it.icon, x + dx + 32, y + h / 2, 32);
+    const name = it.id === 'truck' ? TRUCKS[Math.min(MAX_TRUCK, G.hero.truck + (maxed ? 0 : 1))].name : it.name;
+    let fs = 18; ctx.font = 'bold ' + fs + 'px ' + FONT;
+    while (fs > 12 && ctx.measureText(name).width > w - 70) { fs--; ctx.font = 'bold ' + fs + 'px ' + FONT; }
+    text(name, x + dx + 62, y + 22, fs, '#fff', 'left');
+    text(maxed ? 'MAX!' : '🪙 ' + cost, x + dx + 62, y + 46, 17, ok ? '#fde047' : '#cbd5e1', 'left');
+    if (it.id === 'truck' && G.hero.truck > 0) text(G.hero.truck + '/' + MAX_TRUCK, x + dx + w - 22, y + h - 12, 12, 'rgba(255,255,255,.7)');
+    if (it.id === 'jack') text(G.jacks.length + '/' + JACK.max, x + dx + w - 22, y + h - 12, 12, 'rgba(255,255,255,.7)');
     text((i + 1) + '', x + dx + w - 14, y + 14, 12, 'rgba(255,255,255,.5)');
-    if (it.id === 'miner') text(G.miners.length + '/' + MAX_MINERS, x + dx + w - 26, y + h - 14, 13, 'rgba(255,255,255,.7)');
+    if (it.id === 'miner') text(G.miners.length + '/' + MAX_MINERS, x + dx + w - 22, y + h - 12, 12, 'rgba(255,255,255,.7)');
     ctx.globalAlpha = 1;
   });
 }
@@ -1868,7 +2187,7 @@ window.addEventListener('keydown', e => {
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   keys[k] = true;
   if (G && G.state === 'play') {
-    if (k >= '1' && k <= '5') buy(SHOP[+k - 1].id);
+    if (k >= '1' && k <= String(SHOP.length)) buy(SHOP[+k - 1].id);
     if (k === 'p' || k === 'Escape') pauseGame();
     if (k === 'm') toggleMute();
   } else if (G && G.state === 'paused' && (k === 'p' || k === 'Escape')) resumeGame();
