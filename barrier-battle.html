@@ -84,14 +84,14 @@ button:disabled { opacity: .35; }
     <div class="stars" id="winStars">⭐⭐⭐</div>
     <div class="sub" id="winSub">You smashed the red barrier!</div>
     <button class="go" id="next">Next level ▶</button>
-    <div class="row"><button id="again">Play again</button><button id="menu2">Menu</button></div>
+    <div class="row"><button id="again">Play again</button><button id="menu2">Menu</button><a class="btn" href="index.html">🎮 All games</a></div>
   </div>
 
   <div id="lose" class="screen hidden">
     <h2>Oh no! 💥</h2>
     <div class="sub" id="loseSub">The monsters smashed your castle!</div>
     <button class="go red" id="retry">Try again</button>
-    <button id="menu3">Menu</button>
+    <div class="row"><button id="menu3">Menu</button><a class="btn" href="index.html">🎮 All games</a></div>
   </div>
 
   <div id="rotate" class="screen hidden">📱↻<br>Turn your device sideways!</div>
@@ -2113,7 +2113,7 @@ function drawHUD() {
   bar(812, 18, 300, 22, rt / rm, '#ef4444');
   text(left + ' / ' + SEGS + ' pieces left', 962, 30, 13, '#fff');
   // buttons
-  for (const [i, ic] of [[0, muted ? '🔇' : '🔊'], [1, '⏸️']]) {
+  for (const [i, ic] of [[-1, '🏠'], [0, muted ? '🔇' : '🔊'], [1, '⏸️']]) {
     const x = W - 104 + i * 50;
     rr(x, 8, 42, 42, 10); ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fill();
     drawEmo(ic, x + 21, 29, 24);
@@ -2167,7 +2167,8 @@ canvas.addEventListener('pointerdown', e => {
     return;
   }
   if (p.y < TOP) {
-    if (p.x >= W - 104 && p.x < W - 58) toggleMute();
+    if (p.x >= W - 154 && p.x < W - 108) goHome();
+    else if (p.x >= W - 104 && p.x < W - 58) toggleMute();
     else if (p.x >= W - 54) pauseGame();
     return;
   }
@@ -2196,6 +2197,7 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; keys[k] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.state === 'play') pauseGame(); });
+function goHome() { location.href = 'index.html'; }
 function toggleMute() { muted = !muted; lsSet('muted', muted ? '1' : '0'); if (!muted) sfx('buy'); }
 
 // ---------- Screens ----------

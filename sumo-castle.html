@@ -144,6 +144,29 @@ canvas {
 }
 .level-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #5b21b6; }
 
+.home-btn {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  background: #f59e0b;
+  color: white;
+  border: 3px solid white;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.9em;
+  font-weight: bold;
+  text-decoration: none;
+  box-shadow: 0 4px 0 #b45309, 0 6px 12px rgba(0, 0, 0, 0.2);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.home-btn:active { transform: translateX(-50%) translateY(3px); box-shadow: 0 1px 0 #b45309; }
+/* the title screen already has its own ALL GAMES button */
+#titleScreen.active ~ .home-btn { display: none; }
+@media (max-width: 520px) { .home-label { display: none; } }
+
 /* Level select grid */
 .level-grid {
   display: grid;
@@ -354,6 +377,7 @@ p {
     <button class="btn blue" id="loseLevelSelectBtn" style="font-size:1em;padding:10px 24px;">LEVEL SELECT</button>
   </div>
 
+  <a class="home-btn" href="index.html" title="All games" aria-label="All games">🏠<span class="home-label"> GAMES</span></a>
 </div>
 
 <script>

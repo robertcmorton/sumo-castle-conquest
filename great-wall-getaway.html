@@ -85,14 +85,14 @@ button:disabled { opacity: .35; }
     <div class="stars" id="winStars">⭐⭐⭐</div>
     <div class="sub" id="winSub"></div>
     <button class="go" id="next">Next level ▶</button>
-    <div class="row"><button id="again">Play again</button><button id="menu2">Menu</button></div>
+    <div class="row"><button id="again">Play again</button><button id="menu2">Menu</button><a class="btn" href="index.html">🎮 All games</a></div>
   </div>
 
   <div id="lose" class="screen hidden">
     <h2 id="loseTitle">Oh no! 💥</h2>
     <div class="sub" id="loseSub"></div>
     <button class="go red" id="retry">Try again</button>
-    <button id="menu3">Menu</button>
+    <div class="row"><button id="menu3">Menu</button><a class="btn" href="index.html">🎮 All games</a></div>
   </div>
 
   <div id="rotate" class="screen hidden">📱↻<br>Turn your device sideways!</div>
@@ -1684,7 +1684,7 @@ function drawFloats() { for (const f of G.floats) { ctx.globalAlpha = clamp(f.li
 
 // ---------- HUD ----------
 function hudButtons() {
-  for (const [i, ic] of [[0, muted ? '🔇' : '🔊'], [1, '⏸️']]) {
+  for (const [i, ic] of [[-1, '🏠'], [0, muted ? '🔇' : '🔊'], [1, '⏸️']]) {
     const x = W - 104 + i * 50;
     rr(x, 8, 42, 42, 10); ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fill();
     drawEmo(ic, x + 21, 29, 24);
@@ -1703,13 +1703,13 @@ function drawHeistHUD() {
   bar(355, 20, 150, 18, c.hp / c.max, hpColor(c.hp / c.max));
   text('SUPER CAR', 430, 30, 12, '#fff');
   // trip to the Great Wall
-  const x0 = 560, x1 = 1010, f = clamp(h.camX / h.len, 0, 1);
+  const x0 = 540, x1 = 960, f = clamp(h.camX / h.len, 0, 1);
   rr(x0, 24, x1 - x0, 10, 5); ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fill();
   rr(x0, 24, Math.max(10, (x1 - x0) * f), 10, 5); ctx.fillStyle = '#fb923c'; ctx.fill();
   for (const b of h.banks) drawEmo('🏦', x0 + (x1 - x0) * clamp(b.x / h.len, 0, 1), 29, 18, false, b.robbed ? 0.35 : 1);
   drawEmo('🧱', x1 + 16, 29, 22);
   drawEmo('🏎️', x0 + (x1 - x0) * f, 18, 18);
-  text('🏦 ' + h.robbed + '/' + h.banks.length, 1110, 30, 18, '#fde047');
+  text('🏦 ' + h.robbed + '/' + h.banks.length, 1055, 30, 18, '#fde047');
   hudButtons();
 }
 function drawWarHUD() {
@@ -1719,8 +1719,8 @@ function drawWarHUD() {
   bar(350, 20, 220, 18, w.hide.hp / w.hide.max, hpColor(w.hide.hp / w.hide.max));
   text('YOUR HIDEOUT', 460, 30, 12, '#fff');
   drawEmo('🚔', 640, 29, 26);
-  bar(660, 18, 380, 22, w.station.hp / w.station.max, '#3b82f6');
-  text('POLICE STATION', 850, 30, 13, '#fff');
+  bar(660, 18, 420, 22, w.station.hp / w.station.max, '#3b82f6');
+  text('POLICE STATION', 870, 30, 13, '#fff');
   hudButtons();
 }
 function shopRects() {
@@ -1814,7 +1814,8 @@ canvas.addEventListener('pointerdown', e => {
   if (AC && AC.state === 'suspended') AC.resume();
   const p = toLogical(e);
   if (p.y < TOP) {
-    if (p.x >= W - 104 && p.x < W - 58) toggleMute();
+    if (p.x >= W - 154 && p.x < W - 108) goHome();
+    else if (p.x >= W - 104 && p.x < W - 58) toggleMute();
     else if (p.x >= W - 54) pauseGame();
     return;
   }
@@ -1868,6 +1869,7 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; keys[k] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.state === 'play') pauseGame(); });
+function goHome() { location.href = 'index.html'; }
 function toggleMute() { muted = !muted; lsSet('muted', muted ? '1' : '0'); if (!muted) sfx('buy'); }
 
 // ---------- Screens ----------
