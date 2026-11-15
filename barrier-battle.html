@@ -57,9 +57,12 @@ button:disabled { opacity: .35; }
     <div class="sub">🔵 Blue vs Red 🔴 &nbsp;•&nbsp; 1000 levels &nbsp;•&nbsp; A game by Leo</div>
     <div class="how">
       🌳 <b>Tap trees</b> to walk there and chop wood<br>
-      🧱 <b>Stand by your wall</b> to fix it with wood &ndash; giant animals want to smash it!<br>
+      🧱 <b>Stand by your blue brick wall</b> to fix it &ndash; giant animals want to smash it!<br>
+      👷 <b>Brick Makers</b> turn 2 wood into 1 brick &ndash; bricks fix your wall much faster than wood<br>
       ⛏️ Miners dig gold &nbsp; ⚔️🏹💣 Fighters attack &nbsp; 🪓 Lumberjacks chop &amp; fix your wall<br>
       🛻 7 trucks to buy &ndash; each one costs more but is <b>faster and stronger</b><br>
+      ⛑️ <b>Medics</b> heal your team &ndash; only your team, never the enemy!<br>
+      🎁 <b>Everything!</b> &ndash; a miner, warrior, archer, bomber, lumberjack and medic all for 200<br>
       🏰 Your castle shoots <b>poison darts</b> and <b>bombs</b> &ndash; but their castle shoots <b>fire arrows</b> and <b>boulders</b> back!<br>
       🔴 <b>Smash every piece of the RED barrier</b> to win the level!
     </div>
@@ -106,7 +109,7 @@ const HOUSE = { x: 105, y: 210, r: 58 }, MINE = { x: 140, y: 500 }, CASTLE = { x
 const DOOR = { x: 105, y: 268 }; // just outside your castle gate
 const FONT = "'Comic Sans MS','Chalkboard SE','Marker Felt',sans-serif";
 const EFONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-const MAX_LEVEL = 1000, MAX_UNITS = 40, MAX_MINERS = 8;
+const MAX_LEVEL = 1000, MAX_UNITS = 40, MAX_MINERS = 15;
 
 const BLUE = {
   warrior: { hp: 80, dmg: 13, range: 24, cd: 0.8, spd: 72, r: 12, aggro: 230, wall: 1,   cost: 30, weapon: 'sword' },
@@ -150,16 +153,25 @@ const TRUCKS = [
 ];
 const MAX_TRUCK = TRUCKS.length - 1;
 const HERO_SPD = TRUCKS.map(t => t.spd), CHOP_TIME = TRUCKS.map(t => t.chop);
-// Lumberjacks chop trees and fix your log wall all by themselves
-const JACK = { cost: 150, max: 6, hp: 70, spd: 78, carry: 12, chop: 0.6 };
+// Lumberjacks chop trees and patch your wall with logs all by themselves
+// Brick Makers turn wood into bricks at the brick oven. Bricks fix your wall much faster than wood.
+const BRICK = { cost: 50, max: 4, hp: 60, spd: 75, make: 1.4, wood: 2 };
+const KILN = { x: 228, y: 388 };
+// Medics heal people on YOUR team only – never the enemy
+const MEDIC = { cost: 50, max: 5, hp: 80, spd: 82, heal: 14, cd: 0.9, range: 130 };
+const JACK = { cost: 60, max: 6, hp: 70, spd: 78, carry: 12, chop: 0.6 };
 const SHOP = [
   { id: 'miner',   icon: '⛏️', name: 'Gold Miner' },
   { id: 'warrior', icon: '⚔️', name: 'Warrior' },
   { id: 'archer',  icon: '🏹', name: 'Archer' },
   { id: 'bomber',  icon: '💣', name: 'Bomber' },
   { id: 'jack',    icon: '🪓', name: 'Lumberjack' },
+  { id: 'medic',   icon: '⛑️', name: 'Medic' },
+  { id: 'brick',   icon: '🧱', name: 'Brick Maker' },
   { id: 'truck',   icon: '🛻', name: 'Truck' },
+  { id: 'all',     icon: '🎁', name: 'Everything!' },
 ];
+const ALL_COST = 200; // one of each helper and fighter in one go
 
 // ---------- Save data ----------
 const SAVE = 'leo_barrier_';
@@ -420,6 +432,7 @@ function sfx(type) {
       s.connect(f); f.connect(g); g.connect(AC.destination); s.start(t); s.stop(t + dur);
     };
     switch (type) {
+      case 'heal': tone(784, 0.1, 'sine', 0.06, 1175); tone(1175, 0.14, 'sine', 0.05, null, 0.08); break;
       case 'chop': tone(220, 0.08, 'square', 0.06, 110); noise(0.08, 0.15, 2000); break;
       case 'build': tone(520, 0.1, 'triangle', 0.1, 700); break;
       case 'buy': tone(660, 0.08, 'square', 0.06); tone(990, 0.12, 'square', 0.06, null, 0.08); break;
@@ -451,13 +464,13 @@ function newGame(L, state) {
   const g = {
     L, f, theme, state: state || 'play', t: 0, endT: 0,
     power: Math.pow(f, 0.75), // your team gets stronger in later levels too
-    gold: 50, wood: 8,
+    gold: 50, wood: 8, bricks: 0, kilnFire: 0,
     house: { x: HOUSE.x, y: HOUSE.y, r: HOUSE.r, hp: 400, max: 400, flash: 0, isHouse: true, dartT: 1.5, bombT: 4, kick: 0 },
     castleW: { arrowT: 3, rockT: 7 },
     blueWall: Array.from({ length: SEGS }, (_, i) => mkSeg(i, bwMax, 0.45)),
     redWall: Array.from({ length: SEGS }, (_, i) => mkSeg(i, rwMax, 1)),
     hero: { x: 230, y: 360, tx: null, ty: null, r: 16, hp: 150, max: 150, truck: 0, dead: 0, cd: 0, atk: 0, work: 0, face: 1, task: null, walk: 0, hit: 0, isHero: true },
-    units: [], miners: [], jacks: [], monsters: [], reds: [], towers: [], trees: [], projs: [], parts: [], texts: [],
+    units: [], miners: [], jacks: [], medics: [], makers: [], monsters: [], reds: [], towers: [], trees: [], projs: [], parts: [], texts: [],
     spawnT: 9, redT: 18, freeT: 5, bossDone: false, deny: {}, banner: null, shake: 0,
     chopped: false, repaired: false, bought: false, marker: null,
   };
@@ -484,9 +497,11 @@ function startBanner() {
 }
 
 function addMiner() {
-  const i = G.miners.length;
-  const a = -2.4 + i * 0.75;
-  G.miners.push({ x: MINE.x + Math.cos(a) * 62, y: MINE.y + Math.sin(a) * 50, r: 11, hp: 40, max: 40, t: 1 + Math.random() * 2, atk: 0, hit: 0, walk: 0, face: Math.cos(a) > 0 ? -1 : 1, isMiner: true });
+  // the first 8 miners stand in a ring around the mine, the rest in a bigger ring outside it
+  const i = G.miners.length, outer = i >= 8;
+  const a = outer ? -2.0 + (i - 8) * 0.86 : -2.4 + i * 0.75;
+  const rx = outer ? 96 : 62, ry = outer ? 78 : 50;
+  G.miners.push({ x: MINE.x + Math.cos(a) * rx, y: MINE.y + Math.sin(a) * ry, r: 11, hp: 40, max: 40, t: 1 + Math.random() * 2, atk: 0, hit: 0, walk: 0, face: Math.cos(a) > 0 ? -1 : 1, isMiner: true });
 }
 function spawnBlue(type, free) {
   const s = BLUE[type], k = G.power;
@@ -547,7 +562,7 @@ function nearestSeg(wall, wx, e) {
 }
 function blueEnemies() { return G.monsters.concat(G.reds); }
 function blueTargets() {
-  const list = G.units.concat(G.miners, G.jacks);
+  const list = G.units.concat(G.miners, G.jacks, G.medics, G.makers);
   if (!G.hero.dead) list.push(G.hero);
   return list;
 }
@@ -659,7 +674,7 @@ function updHero(dt) {
   if (moving) { h.work = 0; return; }
   // Fix the wall
   let fix = null;
-  if (Math.abs(h.x - BW) < 64 && G.wood > 0) {
+  if (Math.abs(h.x - BW) < 64 && (G.wood > 0 || G.bricks > 0)) {
     for (const s of G.blueWall) {
       if (s.hp < s.max && h.y > s.y0 - 30 && h.y < s.y1 + 30 && (!fix || s.hp / s.max < fix.hp / fix.max)) fix = s;
     }
@@ -667,9 +682,12 @@ function updHero(dt) {
   if (fix) {
     h.task = 'build'; h.work += dt; h.face = BW > h.x ? 1 : -1;
     if (h.work >= 0.18) {
-      h.work = 0; h.atk = 0.2; G.wood--; fix.hp = Math.min(fix.max, fix.hp + fix.max * 0.08);
+      // a brick fixes much more than a piece of wood
+      const brick = G.bricks > 0;
+      if (brick) G.bricks--; else G.wood--;
+      h.work = 0; h.atk = 0.2; fix.hp = Math.min(fix.max, fix.hp + fix.max * (brick ? 0.2 : 0.08));
       G.repaired = true; sfx('build');
-      if (Math.random() < 0.5) burst(BW, clamp(h.y, fix.y0, fix.y1), '#d97706', 3, 80, 4);
+      if (brick || Math.random() < 0.5) burst(BW, clamp(h.y, fix.y0, fix.y1), brick ? '#2563eb' : '#d97706', 3, 80, 4);
       if (fix.hp >= fix.max) floatText('Fixed! 🧱', BW, fix.yc, '#bbf7d0', 20);
     }
     return;
@@ -759,6 +777,137 @@ function drawJack(j) {
     circle(lx + 7 * -j.face, ly, 2, '#d6a65a');
   }
   hpBar(j, 26, 26);
+}
+
+// ---------- Brick Makers: turn wood into bricks at the brick oven ----------
+function addMaker() {
+  const k = G.power;
+  G.makers.push({ x: DOOR.x + rand(-8, 8), y: DOOR.y + rand(-6, 6), r: 12, hp: BRICK.hp * k, max: BRICK.hp * k, work: 0, cd: 0, atk: 0, hit: 0, face: 1, walk: 0, wait: 0, isMaker: true });
+}
+function makerSpot(b) {
+  const i = G.makers.indexOf(b);
+  const spots = [[-34, 14], [34, 14], [-30, 34], [30, 34]];
+  const [ox, oy] = spots[i % spots.length];
+  return [KILN.x + ox, KILN.y + oy];
+}
+function updMaker(b, dt) {
+  b.px = b.x; b.atk = Math.max(0, b.atk - dt); b.hit = Math.max(0, b.hit - dt); b.wait -= dt;
+  const [tx, ty] = makerSpot(b);
+  if (dist(b.x, b.y, tx, ty) > 4) { moveToward(b, tx, ty, BRICK.spd, dt); b.work = 0; return; }
+  b.face = KILN.x > b.x ? 1 : -1;
+  if (G.wood < BRICK.wood) {
+    b.work = 0;
+    if (b.wait <= 0) { floatText('Need 🪵!', b.x, b.y - 26, '#fde68a', 13); b.wait = 5; }
+    return;
+  }
+  b.work += dt;
+  if (b.work >= BRICK.make) {
+    b.work = 0; b.atk = 0.25;
+    G.wood -= BRICK.wood; G.bricks++; G.kilnFire = 0.8;
+    floatText('+1 🧱', KILN.x, KILN.y - 34, '#fdba74', 15); sfx('build');
+    for (let i = 0; i < 3; i++) G.parts.push({ dust: true, x: KILN.x + 14 + rand(-3, 3), y: KILN.y - 46, vx: rand(-8, 8), vy: rand(-40, -25), g: 0, life: 1.2, max: 1.2, size: 4, color: '#6b7280' });
+  }
+}
+function drawMaker(b) {
+  drawPerson(b, '#ea580c', '#57534e', 'brick');
+  if (b.work > 0) bar(b.x - 12, b.y - 30, 24, 4, b.work / BRICK.make, '#fdba74');
+  hpBar(b, 26, 26);
+}
+// The brick oven (kiln) behind your wall
+function drawKiln() {
+  const x = KILN.x, y = KILN.y, k = REAL, busy = G.makers.length > 0 && G.wood >= BRICK.wood;
+  softShadow(x, y + 14, 36, 9, 0.3);
+  // chimney
+  ctx.fillStyle = k < 0.3 ? '#7c2d12' : '#5b2414'; ctx.fillRect(x + 8, y - 48, 12, 26);
+  ctx.fillStyle = '#44403c'; ctx.fillRect(x + 6, y - 50, 16, 4);
+  // dome of bricks
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(x - 32, y + 12); ctx.lineTo(x - 32, y - 4); ctx.arc(x, y - 4, 32, Math.PI, 0); ctx.lineTo(x + 32, y + 12); ctx.closePath();
+  if (k < 0.3) ctx.fillStyle = '#c2410c';
+  else { const g = ctx.createRadialGradient(x - 10, y - 22, 4, x, y, 44); g.addColorStop(0, '#c4573a'); g.addColorStop(1, '#5e2112'); ctx.fillStyle = g; }
+  ctx.fill();
+  ctx.clip();
+  ctx.strokeStyle = k < 0.3 ? 'rgba(255,237,213,.8)' : 'rgba(40,20,10,.5)'; ctx.lineWidth = 1;
+  for (let yy = y - 36, row = 0; yy < y + 12; yy += 7, row++) {
+    ctx.beginPath(); ctx.moveTo(x - 34, yy); ctx.lineTo(x + 34, yy); ctx.stroke();
+    for (let xx = x - 34 + (row % 2) * 6; xx < x + 34; xx += 12) { ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx, yy + 7); ctx.stroke(); }
+  }
+  ctx.restore();
+  if (k < 0.3) { ctx.strokeStyle = '#431407'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 32, y + 12); ctx.lineTo(x - 32, y - 4); ctx.arc(x, y - 4, 32, Math.PI, 0); ctx.lineTo(x + 32, y + 12); ctx.stroke(); }
+  // glowing fire in the oven mouth
+  const flick = 0.7 + 0.3 * Math.sin(G.t * 18) + (G.kilnFire > 0 ? 0.4 : 0);
+  ctx.fillStyle = '#1c1917'; ctx.beginPath(); ctx.moveTo(x - 13, y + 12); ctx.lineTo(x - 13, y); ctx.arc(x, y, 13, Math.PI, 0); ctx.lineTo(x + 13, y + 12); ctx.closePath(); ctx.fill();
+  if (busy || G.kilnFire > 0) {
+    const g = ctx.createRadialGradient(x, y + 8, 1, x, y + 6, 16);
+    g.addColorStop(0, 'rgba(255,230,120,' + Math.min(1, flick) + ')'); g.addColorStop(0.5, 'rgba(249,115,22,' + Math.min(1, flick * 0.8) + ')'); g.addColorStop(1, 'rgba(120,30,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(x - 14, y - 10, 28, 22);
+    if (Math.random() < 0.08) G.parts.push({ dust: true, x: x + 14, y: y - 50, vx: rand(-6, 6), vy: rand(-30, -18), g: 0, life: 1.4, max: 1.4, size: 3.5, color: '#9ca3af' });
+  }
+  // a little stack of finished bricks
+  const stack = Math.min(G.bricks, 9);
+  for (let i = 0; i < stack; i++) {
+    const bx = x + 40 + (i % 3) * 9, by = y + 8 - Math.floor(i / 3) * 5;
+    ctx.fillStyle = '#2563eb'; ctx.fillRect(bx, by, 8, 4.5); ctx.strokeStyle = 'rgba(15,30,80,.7)'; ctx.lineWidth = 0.6; ctx.strokeRect(bx, by, 8, 4.5);
+  }
+  if (G.L <= 3 && !G.makers.length) text('BRICK OVEN', x, y + 24, 11, 'rgba(255,255,255,.85)', 'center', 'rgba(0,0,0,.5)');
+}
+
+// ---------- Medics: heal people on your team (never the enemy) ----------
+function addMedic() {
+  const k = G.power;
+  G.medics.push({ x: DOOR.x + rand(-8, 8), y: DOOR.y + rand(-6, 6), r: 12, hp: MEDIC.hp * k, max: MEDIC.hp * k, cd: 0, atk: 0, hit: 0, face: 1, walk: 0, beam: 0, bx: 0, by: 0, isMedic: true });
+}
+function updMedic(m, dt) {
+  m.px = m.x; m.cd -= dt; m.atk = Math.max(0, m.atk - dt); m.hit = Math.max(0, m.hit - dt); m.beam = Math.max(0, m.beam - dt);
+  const enemies = blueEnemies();
+  // Medics don't fight: step back if an enemy gets too close
+  const foe = nearest(enemies, m.x, m.y, 85);
+  if (foe) {
+    const d = Math.max(1, dist(m.x, m.y, foe.x, foe.y));
+    moveToward(m, m.x - (foe.x - m.x) / d * 60, clamp(m.y - (foe.y - m.y) / d * 60, TOP + 20, BOT - 20), MEDIC.spd * 1.2, dt);
+    return;
+  }
+  // Find the most hurt person on our team (not too deep in enemy land)
+  let pt = null, best = Infinity;
+  for (const e of blueTargets()) {
+    if (e.dead || e.hp >= e.max) continue; // (a hurt medic can heal themself too)
+    const score = e.hp / e.max + dist(m.x, m.y, e.x, e.y) / 900 + (e.x > RW ? 0.6 : 0);
+    if (score < best) { best = score; pt = e; }
+  }
+  if (pt) {
+    const d = dist(m.x, m.y, pt.x, pt.y);
+    // heal from a little way back, so the medic stays out of the fight
+    if (d > MEDIC.range - 10) { moveToward(m, pt.x, pt.y, MEDIC.spd, dt); return; }
+    m.face = pt.x > m.x ? 1 : -1;
+    if (m.cd <= 0) {
+      const amt = Math.min(pt.max - pt.hp, MEDIC.heal * G.power);
+      pt.hp += amt; m.cd = MEDIC.cd; m.atk = 0.25; m.beam = 0.3; m.bx = pt.x; m.by = pt.y;
+      sfx('heal');
+      floatText('+' + Math.ceil(amt) + ' ❤️', pt.x, pt.y - 26, '#86efac', 14);
+      for (let i = 0; i < 3; i++) G.parts.push({ plus: true, x: pt.x + rand(-8, 8), y: pt.y - rand(0, 14), vx: rand(-8, 8), vy: rand(-45, -25), g: 0, life: 0.8, max: 0.8, size: rand(5, 8), color: '#4ade80' });
+    }
+    return;
+  }
+  // Nobody hurt: follow behind your fighters, or wait safely behind your wall
+  let front = null;
+  for (const u of G.units) if (!u.dead && (!front || u.x > front.x)) front = u;
+  const tx = front ? Math.min(front.x - 100, RW - 110) : BW - 60;
+  const ty = front ? front.y + (m.y < front.y ? -20 : 20) : clamp(m.y, TOP + 40, BOT - 40);
+  if (dist(m.x, m.y, tx, ty) > 12) moveToward(m, tx, ty, MEDIC.spd, dt);
+}
+function drawMedic(m) {
+  if (m.beam > 0) { // a soft green healing beam
+    ctx.globalAlpha = m.beam / 0.3 * 0.7;
+    ctx.strokeStyle = '#86efac'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(m.x + m.face * 8, m.y - 2); ctx.lineTo(m.bx, m.by - 4); ctx.stroke();
+    circle(m.bx, m.by - 4, 10, 'rgba(134,239,172,.5)');
+    ctx.globalAlpha = 1;
+  }
+  drawPerson(m, '#f8fafc', '#dc2626', 'medkit');
+  // red cross on their white coat
+  const r = m.r, cy = m.y + r * 0.2 - Math.abs(Math.sin(m.walk * 12)) * 2 * (1 - 0.7 * REAL);
+  ctx.fillStyle = '#dc2626'; ctx.fillRect(m.x - 1.6, cy - 4.5, 3.2, 9); ctx.fillRect(m.x - 4.5, cy - 1.6, 9, 3.2);
+  hpBar(m, 26, 26);
 }
 
 function updBlue(u, dt) {
@@ -875,7 +1024,7 @@ function updHouse(dt) {
 }
 
 // ---------- The red castle fights back too: fire arrows, and catapult boulders from level 5 ----------
-const CASTLE_RANGE = 330;
+const CASTLE_RANGE = 560; // far enough to cover the whole red barrier and the middle of the field
 function castleMuzzle(which) {
   return which === 'arrow' ? castleToWorld(Math.random() < 0.5 ? 70 : 100, 60) : castleToWorld(85, 20);
 }
@@ -889,10 +1038,10 @@ function updCastle(dt) {
     if (tgt) {
       const [mx, my] = castleMuzzle('arrow');
       G.projs.push({ kind: 'firearrow', x: mx, y: my, tgt, tx: tgt.x, ty: tgt.y, dmg: 6 * Math.pow(G.f, 0.6), team: 'red', spd: 520, ang: 0 });
-      c.arrowT = G.L < 3 ? 2 : 1.3; sfx('arrow');
+      c.arrowT = G.L < 3 ? 1.6 : 1.0; sfx('arrow');
     } else c.arrowT = 0.25;
   }
-  if (G.L >= 5 && c.rockT <= 0) {
+  if (c.rockT <= 0) {
     // Aim the catapult at the biggest bunch of blue fighters
     let best = null, bestN = 0;
     const blues = blueTargets().filter(e => !e.dead && inRange(e));
@@ -903,7 +1052,7 @@ function updCastle(dt) {
     if (best) {
       const [mx, my] = castleMuzzle('rock');
       G.projs.push({ kind: 'bomb', rock: true, sx: mx, sy: my, ex: best.x, ey: best.y, t: 0, dur: 1.1, dmg: 18 * Math.pow(G.f, 0.6), splash: 55, wallMult: 0, team: 'red', x: mx, y: my });
-      c.rockT = 4.5; sfx('launch');
+      c.rockT = G.L < 5 ? 6 : 4.5; sfx('launch');
       burst(mx, my, '#9ca3af', 5, 50, 4);
     } else c.rockT = 0.4;
   }
@@ -991,6 +1140,9 @@ function update(dt) {
     }
     for (const u of g.units) updBlue(u, dt);
     for (const j of g.jacks) updJack(j, dt);
+    for (const m of g.medics) updMedic(m, dt);
+    for (const b of g.makers) updMaker(b, dt);
+    g.kilnFire = Math.max(0, g.kilnFire - dt);
     for (const m of g.monsters) updAttacker(m, dt, m.spd, 6, 1.2, m.dmg, false);
     for (const r of g.reds) updAttacker(r, dt, r.s.spd, r.s.range, r.s.cd, r.dmg, !!r.s.shot);
     for (const t of g.towers) if (!t.gone) updTower(t, dt);
@@ -1028,6 +1180,8 @@ function update(dt) {
   g.units = g.units.filter(u => !u.dead);
   g.miners = g.miners.filter(u => !u.dead);
   g.jacks = g.jacks.filter(u => !u.dead);
+  g.medics = g.medics.filter(u => !u.dead);
+  g.makers = g.makers.filter(u => !u.dead);
   g.monsters = g.monsters.filter(u => !u.dead);
   g.reds = g.reds.filter(u => !u.dead);
 
@@ -1044,7 +1198,7 @@ function update(dt) {
 // Keep everyone from standing inside each other, and keep walls solid
 function separate() {
   const g = G;
-  const list = g.units.concat(g.jacks, g.monsters, g.reds);
+  const list = g.units.concat(g.jacks, g.medics, g.makers, g.monsters, g.reds);
   if (!g.hero.dead) list.push(g.hero);
   for (let i = 0; i < list.length; i++) {
     const a = list[i];
@@ -1098,19 +1252,29 @@ function endLevel(won) {
 
 // ---------- Shop ----------
 function costOf(id) {
+  if (id === 'all') return ALL_COST;
   if (id === 'miner') return 25 + G.miners.length * 10;
   if (id === 'truck') return G.hero.truck < MAX_TRUCK ? TRUCKS[G.hero.truck + 1].cost : Infinity;
   if (id === 'jack') return JACK.cost;
+  if (id === 'medic') return MEDIC.cost;
+  if (id === 'brick') return BRICK.cost;
   return BLUE[id].cost;
 }
+// The Gold Miner button keeps its big original size; the other buttons share the rest of the row
+const GOLD_BTN_W = 202;
 function shopRects() {
-  const n = SHOP.length, gap = 8, x0 = 12, w = (W - 24 - gap * (n - 1)) / n, y = SHOP_Y + 7, h = H - SHOP_Y - 14;
-  return SHOP.map((it, i) => ({ it, x: x0 + i * (w + gap), y, w, h }));
+  const n = SHOP.length, gap = 8, x0 = 12, y = SHOP_Y + 7, h = H - SHOP_Y - 14;
+  const w = (W - 24 - GOLD_BTN_W - gap * (n - 1)) / (n - 1);
+  let x = x0;
+  return SHOP.map(it => { const bw = it.id === 'miner' ? GOLD_BTN_W : w; const r = { it, x, y, w: bw, h }; x += bw + gap; return r; });
 }
 function canBuy(id) {
+  if (id === 'all') return G.gold >= ALL_COST && (G.units.length < MAX_UNITS || G.miners.length < MAX_MINERS || G.jacks.length < JACK.max || G.medics.length < MEDIC.max || G.makers.length < BRICK.max);
   if (id === 'miner' && G.miners.length >= MAX_MINERS) return false;
   if (id === 'truck' && G.hero.truck >= MAX_TRUCK) return false;
   if (id === 'jack' && G.jacks.length >= JACK.max) return false;
+  if (id === 'medic' && G.medics.length >= MEDIC.max) return false;
+  if (id === 'brick' && G.makers.length >= BRICK.max) return false;
   if (BLUE[id] && G.units.length >= MAX_UNITS) return false;
   return G.gold >= costOf(id);
 }
@@ -1123,6 +1287,16 @@ function buy(id) {
     const h = G.hero; h.truck++; h.max += 35; h.hp = Math.min(h.max, h.hp + 35);
     floatText(TRUCKS[h.truck].name + '! Vroom!', h.x, h.y - 40, '#bfdbfe', 22);
   }
+  else if (id === 'all') {
+    if (G.miners.length < MAX_MINERS) addMiner();
+    for (const u of ['warrior', 'archer', 'bomber']) if (G.units.length < MAX_UNITS) spawnBlue(u, false);
+    if (G.jacks.length < JACK.max) addJack();
+    if (G.medics.length < MEDIC.max) addMedic();
+    if (G.makers.length < BRICK.max) addMaker();
+    floatText('Everything! 🎁', DOOR.x, DOOR.y - 30, '#f0abfc', 24);
+  }
+  else if (id === 'brick') { addMaker(); floatText('Brick Maker ready! 🧱', KILN.x, KILN.y - 40, '#fed7aa', 18); }
+  else if (id === 'medic') { addMedic(); floatText('Medic ready! ⛑️', DOOR.x, DOOR.y - 24, '#fecaca', 18); }
   else if (id === 'jack') { addJack(); floatText('Lumberjack ready! 🪓', DOOR.x, DOOR.y - 24, '#bbf7d0', 18); }
   else { spawnBlue(id, false); }
 }
@@ -1281,42 +1455,33 @@ function buildWallSprites() {
       t.fillStyle = k < 0.3 ? '#dc2626' : '#991b1b'; t.fillRect(0, 3, ow, 7);
       if (k >= 0.3) { t.fillStyle = 'rgba(255,255,255,.15)'; t.fillRect(0, 3, ow, 2); }
     } else {
-      for (let j = 0; j < 3; j++) {
-        const lx = x + j * (w / 3), lw = w / 3 - 1;
-        const col = ['#92400e', '#a16207', '#854d0e'][j];
-        if (k < 0.2) {
-          t.fillStyle = col; rr2(t, lx, 1, lw, SEG_H - 2, 4); t.fill();
-          t.fillStyle = '#d6a65a'; t.beginPath(); t.arc(lx + lw / 2, 6, lw / 2, 0, Math.PI * 2); t.fill();
-        } else {
-          const bark = shadeHex('#6b4423', (j - 1) * 0.08);
-          const gr = t.createLinearGradient(lx, 0, lx + lw, 0);
-          gr.addColorStop(0, shadeHex('#6b4423', 0.25 * k)); gr.addColorStop(0.45, bark); gr.addColorStop(1, shadeHex('#3b2414', -0.3 * k));
-          t.fillStyle = gr; rr2(t, lx, 1, lw, SEG_H - 2, 3); t.fill();
-          // bark grain
-          t.strokeStyle = 'rgba(30,15,5,' + (0.35 + 0.3 * k) + ')'; t.lineWidth = 0.7;
-          for (let g = 0; g < 3 + 4 * k; g++) {
-            const gx = lx + 1 + rnd() * (lw - 2);
-            t.beginPath(); t.moveTo(gx, 4);
-            for (let yy = 4; yy < SEG_H - 3; yy += 6) t.lineTo(gx + Math.sin(yy * 0.3 + g) * 0.7, yy);
-            t.stroke();
+      // Your wall: a wall of blue bricks
+      const rowH = 8, mortar = k < 0.3 ? '#f5e6c8' : '#d4d8e0';
+      t.fillStyle = mortar; t.fillRect(x, 1, w, SEG_H - 2);
+      for (let yy = 1, row = 0; yy < SEG_H - 2; yy += rowH, row++) {
+        const bh = Math.min(rowH, SEG_H - 2 - yy) - 1.2;
+        for (let xx = x - (row % 2 ? 6 : 0); xx < x + w; xx += 12) {
+          const bx = Math.max(x, xx + 0.6), bw = Math.min(x + w, xx + 12) - bx - 1.2;
+          if (bw <= 0.5) continue;
+          if (k < 0.3) t.fillStyle = (row + Math.floor(xx / 12)) % 3 ? '#2563eb' : '#1d4ed8';
+          else {
+            const base = shadeHex('#2b6cf0', (rnd() - 0.5) * 0.3);
+            const gr = t.createLinearGradient(bx, yy, bx + bw, yy + bh);
+            gr.addColorStop(0, shadeHex('#2b6cf0', 0.15 * k + (rnd() - 0.5) * 0.12)); gr.addColorStop(0.5, base); gr.addColorStop(1, shadeHex('#1d4ed8', -0.25 * k));
+            t.fillStyle = gr;
           }
-          for (let n = 0; n < 2 * k; n++) { t.fillStyle = 'rgba(30,15,5,.6)'; t.beginPath(); t.ellipse(lx + lw / 2, 15 + rnd() * (SEG_H - 30), 1.4, 2.6, 0, 0, Math.PI * 2); t.fill(); }
-          // cut end with tree rings
-          const ex = lx + lw / 2;
-          t.fillStyle = '#c9975a'; t.beginPath(); t.arc(ex, 6, lw / 2, 0, Math.PI * 2); t.fill();
-          t.strokeStyle = 'rgba(120,70,30,.6)'; t.lineWidth = 0.5;
-          for (let r = 1; r < lw / 2; r += 1.3) { t.beginPath(); t.arc(ex, 6, r, 0, Math.PI * 2); t.stroke(); }
+          rr2(t, bx, yy + 0.6, bw, bh, k < 0.3 ? 1 : 0.6); t.fill();
+          if (k < 0.3) { t.strokeStyle = 'rgba(15,30,80,.6)'; t.lineWidth = 0.8; t.stroke(); }
         }
       }
-      // blue band (a painted rope binding later on)
-      if (k < 0.2) { t.fillStyle = '#2563eb'; t.fillRect(0, SEG_H / 2 - 4, ow, 8); }
-      else {
-        const gr = t.createLinearGradient(0, SEG_H / 2 - 4, 0, SEG_H / 2 + 4);
-        gr.addColorStop(0, '#3b6fd6'); gr.addColorStop(1, '#1e3a8a');
-        t.fillStyle = gr; t.fillRect(0, SEG_H / 2 - 4, ow, 8);
-        t.strokeStyle = 'rgba(0,0,0,.35)'; t.lineWidth = 0.6;
-        for (let xx = 0; xx < ow; xx += 2.5) { t.beginPath(); t.moveTo(xx, SEG_H / 2 - 4); t.lineTo(xx + 2, SEG_H / 2 + 4); t.stroke(); }
+      if (k >= 0.3) { // soot, chips and grime
+        for (let i = 0; i < 50 * k; i++) { t.fillStyle = rnd() < 0.6 ? 'rgba(0,0,0,.15)' : 'rgba(220,235,255,.2)'; t.fillRect(x + rnd() * w, 1 + rnd() * (SEG_H - 3), 1.3, 1.3); }
+        const sh = t.createLinearGradient(x, 0, x + w, 0); sh.addColorStop(0, 'rgba(255,240,220,' + (0.12 * k) + ')'); sh.addColorStop(1, 'rgba(0,0,0,' + (0.2 * k) + ')');
+        t.fillStyle = sh; t.fillRect(x, 1, w, SEG_H - 2);
       }
+      // dark blue cap stones on top
+      t.fillStyle = k < 0.3 ? '#1e3a8a' : '#172554'; t.fillRect(0, 3, ow, 7);
+      if (k >= 0.3) { t.fillStyle = 'rgba(255,255,255,.18)'; t.fillRect(0, 3, ow, 2); }
     }
     return c;
   };
@@ -1339,7 +1504,7 @@ function drawWall(wall, wx, red) {
       // rubble
       for (let i = 0; i < 6; i++) {
         const yy = s.y0 + 8 + i * (SEG_H - 16) / 5, rx = wx + Math.sin(i * 7 + s.i) * 8, r = 6 + (i % 3) * 2;
-        const col = red ? '#6b7280' : '#78350f';
+        const col = red ? '#6b7280' : '#1e40af';
         if (k > 0.2) { softShadow(rx + 2, yy + r * 0.6, r, r * 0.5, 0.3); }
         circle(rx, yy, r, col);
         if (k > 0.2) circle(rx - r * 0.3, yy - r * 0.3, r * 0.5, shadeHex(col, 0.25));
@@ -1370,6 +1535,11 @@ function drawWeapon(kind, swing) {
   ctx.lineCap = 'round';
   ctx.rotate(swing);
   switch (kind) {
+    case 'brick':
+      ctx.fillStyle = '#2563eb'; ctx.fillRect(-5, -6, 10, 5.5); ctx.strokeStyle = 'rgba(15,30,80,.7)'; ctx.lineWidth = 0.8; ctx.strokeRect(-5, -6, 10, 5.5); break;
+    case 'medkit':
+      ctx.fillStyle = '#f8fafc'; rr(-5, -8, 10, 8, 2); ctx.fill(); ctx.strokeStyle = '#991b1b'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = '#dc2626'; ctx.fillRect(-1, -7, 2, 6); ctx.fillRect(-3, -5, 6, 2); break;
     case 'sword':
       ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -18); ctx.stroke();
       ctx.strokeStyle = '#78350f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-4, -2); ctx.lineTo(4, -2); ctx.stroke(); break;
@@ -1990,6 +2160,9 @@ function render() {
   for (const t of G.towers) list.push({ y: t.y + 20, f: () => drawTower(t) });
   for (const m of G.miners) list.push({ y: m.y, f: () => drawMiner(m) });
   for (const j of G.jacks) list.push({ y: j.y, f: () => drawJack(j) });
+  for (const m of G.medics) list.push({ y: m.y, f: () => drawMedic(m) });
+  for (const b of G.makers) list.push({ y: b.y, f: () => drawMaker(b) });
+  list.push({ y: KILN.y + 14, f: drawKiln });
   for (const u of G.units) list.push({ y: u.y, f: () => { drawPerson(u, u.free ? '#3b82f6' : '#2563eb', u.type === 'bomber' ? '#111827' : u.type === 'archer' ? '#15803d' : '#94a3b8', u.s.weapon); hpBar(u, 26, 26); } });
   for (const r of G.reds) list.push({ y: r.y, f: () => { drawPerson(r, '#dc2626', r.type === 'brute' ? '#7f1d1d' : r.type === 'archer' ? '#92400e' : '#4b5563', r.s.weapon, r.type === 'brute' ? 1.1 : 1); if (r.poison) drawPoisoned(r); hpBar(r, 26, r.r + 14); } });
   for (const m of G.monsters) list.push({ y: m.y + m.r * 0.6, f: () => drawMonster(m) });
@@ -2043,6 +2216,13 @@ function render() {
       ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.3 + k * 0.8), 0, Math.PI * 2); ctx.stroke();
       continue;
     }
+    if (p.plus) { // little green + signs when a medic heals someone
+      ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
+      ctx.fillStyle = p.color; const s = p.size;
+      ctx.fillRect(p.x - s / 2, p.y - s / 6, s, s / 3); ctx.fillRect(p.x - s / 6, p.y - s / 2, s / 3, s);
+      ctx.globalAlpha = 1;
+      continue;
+    }
     if (p.bubble) {
       ctx.globalAlpha = clamp(p.life / p.max, 0, 1) * 0.85;
       ctx.strokeStyle = p.color; ctx.lineWidth = 1.2;
@@ -2088,8 +2268,9 @@ function drawHint() {
   if (G.L > 2 || G.state !== 'play' || G.banner) return;
   let msg;
   if (!G.chopped) msg = '👆 Tap a tree 🌳 to walk there and chop wood!';
-  else if (!G.repaired) msg = '🪵 Now stand next to your wooden wall to fix it!';
+  else if (!G.repaired) msg = '🪵 Now stand next to your brick wall to fix it!';
   else if (!G.bought) msg = '⚔️ Buy fighters at the bottom to smash the RED barrier!';
+  else if (G.t < 70) msg = '🧱 Brick Makers turn wood into bricks – bricks fix your wall much faster!';
   else if (G.t < 140) msg = '🪓 Lumberjacks fix your wall for you. 🛻 Trucks make you faster!';
   if (!msg) return;
   ctx.font = 'bold 22px ' + FONT;
@@ -2103,10 +2284,11 @@ function drawHUD() {
   rr(10, 9, 150, 40, 12); ctx.fillStyle = '#2563eb'; ctx.fill();
   text('LEVEL ' + G.L, 85, 30, 22, '#fff');
   drawEmo('🪙', 190, 29, 26); text(Math.floor(G.gold) + '', 210, 30, 24, '#fde047', 'left');
-  drawEmo('🪵', 310, 29, 26); text(G.wood + '', 330, 30, 24, '#fcd34d', 'left');
-  drawEmo('🏰', 420, 28, 26);
-  bar(440, 20, 170, 18, G.house.hp / G.house.max, G.house.hp / G.house.max > 0.5 ? '#4ade80' : G.house.hp / G.house.max > 0.25 ? '#facc15' : '#ef4444');
-  text('YOUR CASTLE', 525, 30, 12, '#fff');
+  drawEmo('🪵', 285, 29, 24); text(G.wood + '', 303, 30, 22, '#fcd34d', 'left');
+  drawEmo('🧱', 355, 29, 24); text(G.bricks + '', 373, 30, 22, '#fdba74', 'left');
+  drawEmo('🏰', 430, 28, 26);
+  bar(450, 20, 160, 18, G.house.hp / G.house.max, G.house.hp / G.house.max > 0.5 ? '#4ade80' : G.house.hp / G.house.max > 0.25 ? '#facc15' : '#ef4444');
+  text('YOUR CASTLE', 530, 30, 12, '#fff');
   const rt = G.redWall.reduce((a, s) => a + s.hp, 0), rm = G.redWall.reduce((a, s) => a + s.max, 0);
   const left = G.redWall.filter(s => s.hp > 0).length;
   text('RED BARRIER', 800, 30, 17, '#fecaca', 'right');
@@ -2124,22 +2306,32 @@ function drawShop() {
   ctx.fillStyle = 'rgba(15,23,42,.92)'; ctx.fillRect(0, SHOP_Y, W, H - SHOP_Y);
   shopRects().forEach(({ it, x, y, w, h }, i) => {
     const cost = costOf(it.id), ok = canBuy(it.id);
-    const maxed = (it.id === 'truck' && G.hero.truck >= MAX_TRUCK) || (it.id === 'miner' && G.miners.length >= MAX_MINERS) || (it.id === 'jack' && G.jacks.length >= JACK.max);
+    const maxed = (it.id === 'truck' && G.hero.truck >= MAX_TRUCK) || (it.id === 'miner' && G.miners.length >= MAX_MINERS) || (it.id === 'jack' && G.jacks.length >= JACK.max) || (it.id === 'medic' && G.medics.length >= MEDIC.max) || (it.id === 'brick' && G.makers.length >= BRICK.max);
     const dx = G.deny[it.id] > 0 ? Math.sin(G.deny[it.id] * 60) * 4 : 0;
     rr(x + dx, y, w, h, 14);
-    ctx.fillStyle = ok ? (it.id === 'truck' ? '#0e7490' : it.id === 'miner' ? '#a16207' : it.id === 'jack' ? '#15803d' : '#1d4ed8') : '#334155'; ctx.fill();
+    ctx.fillStyle = ok ? (it.id === 'truck' ? '#0e7490' : it.id === 'miner' ? '#a16207' : it.id === 'jack' ? '#15803d' : it.id === 'medic' ? '#be123c' : it.id === 'brick' ? '#c2410c' : it.id === 'all' ? '#7e22ce' : '#1d4ed8') : '#334155'; ctx.fill();
     ctx.globalAlpha = ok ? 1 : 0.55;
-    if (it.id === 'truck') drawTruckIcon(Math.min(MAX_TRUCK, G.hero.truck + 1), x + dx + 34, y + h / 2 + 4, 56);
-    else drawEmo(it.icon, x + dx + 32, y + h / 2, 32);
     const name = it.id === 'truck' ? TRUCKS[Math.min(MAX_TRUCK, G.hero.truck + (maxed ? 0 : 1))].name : it.name;
-    let fs = 18; ctx.font = 'bold ' + fs + 'px ' + FONT;
-    while (fs > 12 && ctx.measureText(name).width > w - 70) { fs--; ctx.font = 'bold ' + fs + 'px ' + FONT; }
-    text(name, x + dx + 62, y + 22, fs, '#fff', 'left');
-    text(maxed ? 'MAX!' : '🪙 ' + cost, x + dx + 62, y + 46, 17, ok ? '#fde047' : '#cbd5e1', 'left');
-    if (it.id === 'truck' && G.hero.truck > 0) text(G.hero.truck + '/' + MAX_TRUCK, x + dx + w - 22, y + h - 12, 12, 'rgba(255,255,255,.7)');
-    if (it.id === 'jack') text(G.jacks.length + '/' + JACK.max, x + dx + w - 22, y + h - 12, 12, 'rgba(255,255,255,.7)');
-    text((i + 1) + '', x + dx + w - 14, y + 14, 12, 'rgba(255,255,255,.5)');
-    if (it.id === 'miner') text(G.miners.length + '/' + MAX_MINERS, x + dx + w - 22, y + h - 12, 12, 'rgba(255,255,255,.7)');
+    const count = it.id === 'miner' ? G.miners.length + '/' + MAX_MINERS : it.id === 'jack' ? G.jacks.length + '/' + JACK.max : it.id === 'medic' ? G.medics.length + '/' + MEDIC.max : it.id === 'brick' ? G.makers.length + '/' + BRICK.max : it.id === 'truck' && G.hero.truck > 0 ? G.hero.truck + '/' + MAX_TRUCK : '';
+    if (it.id === 'miner') {
+      // the Gold Miner button looks just like it always did
+      drawEmo(it.icon, x + dx + 32, y + h / 2, 32);
+      let fs = 18; ctx.font = 'bold ' + fs + 'px ' + FONT;
+      while (fs > 12 && ctx.measureText(name).width > w - 70) { fs--; ctx.font = 'bold ' + fs + 'px ' + FONT; }
+      text(name, x + dx + 62, y + 22, fs, '#fff', 'left');
+      text(maxed ? 'MAX!' : '🪙 ' + cost, x + dx + 62, y + 46, 17, ok ? '#fde047' : '#cbd5e1', 'left');
+      text((i + 1) + '', x + dx + w - 14, y + 14, 12, 'rgba(255,255,255,.5)');
+      text(count, x + dx + w - 22, y + h - 12, 12, 'rgba(255,255,255,.7)');
+    } else {
+      if (it.id === 'truck') drawTruckIcon(Math.min(MAX_TRUCK, G.hero.truck + 1), x + dx + 24, y + h / 2 + 4, 38);
+      else drawEmo(it.icon, x + dx + 22, y + h / 2 + 2, 26);
+      let fs = 16; ctx.font = 'bold ' + fs + 'px ' + FONT;
+      while (fs > 10 && ctx.measureText(name).width > w - 46) { fs--; ctx.font = 'bold ' + fs + 'px ' + FONT; }
+      text(name, x + dx + 40, y + 24, fs, '#fff', 'left');
+      text(maxed ? 'MAX!' : '🪙 ' + cost, x + dx + 40, y + 47, 15, ok ? '#fde047' : '#cbd5e1', 'left');
+      text((i + 1) + '', x + dx + 8, y + 10, 10, 'rgba(255,255,255,.55)');
+      if (count) text(count, x + dx + w - 16, y + 10, 10, 'rgba(255,255,255,.75)');
+    }
     ctx.globalAlpha = 1;
   });
 }
