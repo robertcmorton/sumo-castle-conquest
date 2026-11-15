@@ -58,7 +58,7 @@ button:disabled { opacity: .35; }
     <div class="how">
       🌳 <b>Tap trees</b> to walk there and chop wood<br>
       🧱 <b>Stand by your blue brick wall</b> to fix it &ndash; giant animals want to smash it!<br>
-      👷 <b>Brick Makers</b> turn 2 wood into 1 brick &ndash; bricks fix your wall much faster than wood<br>
+      🧱 <b>Brick Makers</b> turn 2 wood into 1 brick &nbsp; 👷 <b>Bricklayers</b> put the bricks on your wall<br>
       ⛏️ Miners dig gold &nbsp; ⚔️🏹💣 Fighters attack &nbsp; 🪓 Lumberjacks chop &amp; fix your wall<br>
       🛻 7 trucks to buy &ndash; each one costs more but is <b>faster and stronger</b><br>
       ⛑️ <b>Medics</b> heal your team &ndash; only your team, never the enemy!<br>
@@ -156,6 +156,8 @@ const HERO_SPD = TRUCKS.map(t => t.spd), CHOP_TIME = TRUCKS.map(t => t.chop);
 // Lumberjacks chop trees and patch your wall with logs all by themselves
 // Brick Makers turn wood into bricks at the brick oven. Bricks fix your wall much faster than wood.
 const BRICK = { cost: 50, max: 4, hp: 60, spd: 75, make: 1.4, wood: 2 };
+// Bricklayers carry bricks from the oven and put them on your wall
+const LAYER = { cost: 50, max: 4, hp: 70, spd: 85, carry: 4, lay: 0.35 };
 const KILN = { x: 228, y: 388 };
 // Medics heal people on YOUR team only – never the enemy
 const MEDIC = { cost: 50, max: 5, hp: 80, spd: 82, heal: 14, cd: 0.9, range: 130 };
@@ -168,6 +170,7 @@ const SHOP = [
   { id: 'jack',    icon: '🪓', name: 'Lumberjack' },
   { id: 'medic',   icon: '⛑️', name: 'Medic' },
   { id: 'brick',   icon: '🧱', name: 'Brick Maker' },
+  { id: 'layer',   icon: '👷', name: 'Bricklayer' },
   { id: 'truck',   icon: '🛻', name: 'Truck' },
   { id: 'all',     icon: '🎁', name: 'Everything!' },
 ];
@@ -470,7 +473,7 @@ function newGame(L, state) {
     blueWall: Array.from({ length: SEGS }, (_, i) => mkSeg(i, bwMax, 0.45)),
     redWall: Array.from({ length: SEGS }, (_, i) => mkSeg(i, rwMax, 1)),
     hero: { x: 230, y: 360, tx: null, ty: null, r: 16, hp: 150, max: 150, truck: 0, dead: 0, cd: 0, atk: 0, work: 0, face: 1, task: null, walk: 0, hit: 0, isHero: true },
-    units: [], miners: [], jacks: [], medics: [], makers: [], monsters: [], reds: [], towers: [], trees: [], projs: [], parts: [], texts: [],
+    units: [], miners: [], jacks: [], medics: [], makers: [], layers: [], monsters: [], reds: [], towers: [], trees: [], projs: [], parts: [], texts: [],
     spawnT: 9, redT: 18, freeT: 5, bossDone: false, deny: {}, banner: null, shake: 0,
     chopped: false, repaired: false, bought: false, marker: null,
   };
@@ -562,7 +565,7 @@ function nearestSeg(wall, wx, e) {
 }
 function blueEnemies() { return G.monsters.concat(G.reds); }
 function blueTargets() {
-  const list = G.units.concat(G.miners, G.jacks, G.medics, G.makers);
+  const list = G.units.concat(G.miners, G.jacks, G.medics, G.makers, G.layers);
   if (!G.hero.dead) list.push(G.hero);
   return list;
 }
@@ -850,6 +853,64 @@ function drawKiln() {
     ctx.fillStyle = '#2563eb'; ctx.fillRect(bx, by, 8, 4.5); ctx.strokeStyle = 'rgba(15,30,80,.7)'; ctx.lineWidth = 0.6; ctx.strokeRect(bx, by, 8, 4.5);
   }
   if (G.L <= 3 && !G.makers.length) text('BRICK OVEN', x, y + 24, 11, 'rgba(255,255,255,.85)', 'center', 'rgba(0,0,0,.5)');
+}
+
+// ---------- Bricklayers: carry bricks from the oven and put them on your wall ----------
+function addLayer() {
+  const k = G.power;
+  G.layers.push({ x: DOOR.x + rand(-8, 8), y: DOOR.y + rand(-6, 6), r: 12, hp: LAYER.hp * k, max: LAYER.hp * k, carry: 0, work: 0, atk: 0, hit: 0, face: 1, walk: 0, wait: 0, isLayer: true });
+}
+function updLayer(b, dt) {
+  b.px = b.x; b.atk = Math.max(0, b.atk - dt); b.hit = Math.max(0, b.hit - dt); b.wait -= dt;
+  // the most broken piece of wall that nobody else is already fixing
+  let seg = null;
+  for (const s of G.blueWall) {
+    if (s.hp >= s.max) continue;
+    const busy = G.layers.some(o => o !== b && o.seg === s && o.carry > 0);
+    const score = s.hp / s.max + (busy ? 0.25 : 0);
+    if (!seg || score < seg.score) seg = { s, score };
+  }
+  seg = seg && seg.s;
+  if (b.carry > 0 && seg) {
+    b.seg = seg;
+    const tx = BW - 24, ty = clamp(b.y, seg.y0 + 12, seg.y1 - 12);
+    if (dist(b.x, b.y, tx, ty) > 6) { moveToward(b, tx, ty, LAYER.spd, dt); b.work = 0; return; }
+    b.face = 1; b.work += dt;
+    if (b.work >= LAYER.lay) {
+      b.work = 0; b.atk = 0.2; b.carry--;
+      seg.hp = Math.min(seg.max, seg.hp + seg.max * 0.2);
+      sfx('build'); burst(BW, ty, '#2563eb', 4, 90, 4);
+      if (seg.hp >= seg.max) floatText('Fixed! 🧱', BW, seg.yc, '#bfdbfe', 18);
+    }
+    return;
+  }
+  b.seg = null;
+  // empty-handed and the wall needs fixing: grab bricks from the pile by the oven
+  if (b.carry === 0 && seg) {
+    if (G.bricks <= 0) {
+      if (b.wait <= 0) { floatText('Need 🧱!', b.x, b.y - 26, '#fde68a', 13); b.wait = 5; }
+      const tx = KILN.x + 56, ty = KILN.y + 30;
+      if (dist(b.x, b.y, tx, ty) > 8) moveToward(b, tx, ty, LAYER.spd, dt);
+      return;
+    }
+    const tx = KILN.x + 52, ty = KILN.y + 22;
+    if (dist(b.x, b.y, tx, ty) > 8) { moveToward(b, tx, ty, LAYER.spd, dt); return; }
+    const take = Math.min(LAYER.carry, G.bricks); G.bricks -= take; b.carry = take;
+    floatText('-' + take + ' 🧱', b.x, b.y - 26, '#bfdbfe', 13);
+    return;
+  }
+  // wall is all fixed: wait just behind it, ready to go
+  const tx = BW - 46, ty = clamp(b.y, TOP + 50, BOT - 50);
+  if (Math.abs(b.x - tx) > 6) moveToward(b, tx, ty, LAYER.spd, dt);
+}
+function drawLayer(b) {
+  drawPerson(b, '#facc15', '#f97316', 'trowel');
+  // bricks carried in their arms
+  for (let i = 0; i < b.carry; i++) {
+    const bx = b.x - b.face * 2 - 5, by = b.y - 1 - i * 3.6;
+    ctx.fillStyle = '#2563eb'; ctx.fillRect(bx, by, 10, 3.4); ctx.strokeStyle = 'rgba(15,30,80,.7)'; ctx.lineWidth = 0.6; ctx.strokeRect(bx, by, 10, 3.4);
+  }
+  hpBar(b, 26, 26);
 }
 
 // ---------- Medics: heal people on your team (never the enemy) ----------
@@ -1142,6 +1203,7 @@ function update(dt) {
     for (const j of g.jacks) updJack(j, dt);
     for (const m of g.medics) updMedic(m, dt);
     for (const b of g.makers) updMaker(b, dt);
+    for (const b of g.layers) updLayer(b, dt);
     g.kilnFire = Math.max(0, g.kilnFire - dt);
     for (const m of g.monsters) updAttacker(m, dt, m.spd, 6, 1.2, m.dmg, false);
     for (const r of g.reds) updAttacker(r, dt, r.s.spd, r.s.range, r.s.cd, r.dmg, !!r.s.shot);
@@ -1182,6 +1244,7 @@ function update(dt) {
   g.jacks = g.jacks.filter(u => !u.dead);
   g.medics = g.medics.filter(u => !u.dead);
   g.makers = g.makers.filter(u => !u.dead);
+  g.layers = g.layers.filter(u => !u.dead);
   g.monsters = g.monsters.filter(u => !u.dead);
   g.reds = g.reds.filter(u => !u.dead);
 
@@ -1198,7 +1261,7 @@ function update(dt) {
 // Keep everyone from standing inside each other, and keep walls solid
 function separate() {
   const g = G;
-  const list = g.units.concat(g.jacks, g.medics, g.makers, g.monsters, g.reds);
+  const list = g.units.concat(g.jacks, g.medics, g.makers, g.layers, g.monsters, g.reds);
   if (!g.hero.dead) list.push(g.hero);
   for (let i = 0; i < list.length; i++) {
     const a = list[i];
@@ -1258,6 +1321,7 @@ function costOf(id) {
   if (id === 'jack') return JACK.cost;
   if (id === 'medic') return MEDIC.cost;
   if (id === 'brick') return BRICK.cost;
+  if (id === 'layer') return LAYER.cost;
   return BLUE[id].cost;
 }
 // The Gold Miner button keeps its big original size; the other buttons share the rest of the row
@@ -1269,12 +1333,13 @@ function shopRects() {
   return SHOP.map(it => { const bw = it.id === 'miner' ? GOLD_BTN_W : w; const r = { it, x, y, w: bw, h }; x += bw + gap; return r; });
 }
 function canBuy(id) {
-  if (id === 'all') return G.gold >= ALL_COST && (G.units.length < MAX_UNITS || G.miners.length < MAX_MINERS || G.jacks.length < JACK.max || G.medics.length < MEDIC.max || G.makers.length < BRICK.max);
+  if (id === 'all') return G.gold >= ALL_COST && (G.units.length < MAX_UNITS || G.miners.length < MAX_MINERS || G.jacks.length < JACK.max || G.medics.length < MEDIC.max || G.makers.length < BRICK.max || G.layers.length < LAYER.max);
   if (id === 'miner' && G.miners.length >= MAX_MINERS) return false;
   if (id === 'truck' && G.hero.truck >= MAX_TRUCK) return false;
   if (id === 'jack' && G.jacks.length >= JACK.max) return false;
   if (id === 'medic' && G.medics.length >= MEDIC.max) return false;
   if (id === 'brick' && G.makers.length >= BRICK.max) return false;
+  if (id === 'layer' && G.layers.length >= LAYER.max) return false;
   if (BLUE[id] && G.units.length >= MAX_UNITS) return false;
   return G.gold >= costOf(id);
 }
@@ -1293,8 +1358,10 @@ function buy(id) {
     if (G.jacks.length < JACK.max) addJack();
     if (G.medics.length < MEDIC.max) addMedic();
     if (G.makers.length < BRICK.max) addMaker();
+    if (G.layers.length < LAYER.max) addLayer();
     floatText('Everything! 🎁', DOOR.x, DOOR.y - 30, '#f0abfc', 24);
   }
+  else if (id === 'layer') { addLayer(); floatText('Bricklayer ready! 👷', KILN.x, KILN.y - 40, '#fef08a', 18); }
   else if (id === 'brick') { addMaker(); floatText('Brick Maker ready! 🧱', KILN.x, KILN.y - 40, '#fed7aa', 18); }
   else if (id === 'medic') { addMedic(); floatText('Medic ready! ⛑️', DOOR.x, DOOR.y - 24, '#fecaca', 18); }
   else if (id === 'jack') { addJack(); floatText('Lumberjack ready! 🪓', DOOR.x, DOOR.y - 24, '#bbf7d0', 18); }
@@ -1535,6 +1602,9 @@ function drawWeapon(kind, swing) {
   ctx.lineCap = 'round';
   ctx.rotate(swing);
   switch (kind) {
+    case 'trowel':
+      ctx.strokeStyle = '#78350f'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -6); ctx.stroke();
+      ctx.fillStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(-4, -6); ctx.lineTo(4, -6); ctx.lineTo(0, -14); ctx.closePath(); ctx.fill(); break;
     case 'brick':
       ctx.fillStyle = '#2563eb'; ctx.fillRect(-5, -6, 10, 5.5); ctx.strokeStyle = 'rgba(15,30,80,.7)'; ctx.lineWidth = 0.8; ctx.strokeRect(-5, -6, 10, 5.5); break;
     case 'medkit':
@@ -2162,6 +2232,7 @@ function render() {
   for (const j of G.jacks) list.push({ y: j.y, f: () => drawJack(j) });
   for (const m of G.medics) list.push({ y: m.y, f: () => drawMedic(m) });
   for (const b of G.makers) list.push({ y: b.y, f: () => drawMaker(b) });
+  for (const b of G.layers) list.push({ y: b.y, f: () => drawLayer(b) });
   list.push({ y: KILN.y + 14, f: drawKiln });
   for (const u of G.units) list.push({ y: u.y, f: () => { drawPerson(u, u.free ? '#3b82f6' : '#2563eb', u.type === 'bomber' ? '#111827' : u.type === 'archer' ? '#15803d' : '#94a3b8', u.s.weapon); hpBar(u, 26, 26); } });
   for (const r of G.reds) list.push({ y: r.y, f: () => { drawPerson(r, '#dc2626', r.type === 'brute' ? '#7f1d1d' : r.type === 'archer' ? '#92400e' : '#4b5563', r.s.weapon, r.type === 'brute' ? 1.1 : 1); if (r.poison) drawPoisoned(r); hpBar(r, 26, r.r + 14); } });
@@ -2306,13 +2377,13 @@ function drawShop() {
   ctx.fillStyle = 'rgba(15,23,42,.92)'; ctx.fillRect(0, SHOP_Y, W, H - SHOP_Y);
   shopRects().forEach(({ it, x, y, w, h }, i) => {
     const cost = costOf(it.id), ok = canBuy(it.id);
-    const maxed = (it.id === 'truck' && G.hero.truck >= MAX_TRUCK) || (it.id === 'miner' && G.miners.length >= MAX_MINERS) || (it.id === 'jack' && G.jacks.length >= JACK.max) || (it.id === 'medic' && G.medics.length >= MEDIC.max) || (it.id === 'brick' && G.makers.length >= BRICK.max);
+    const maxed = (it.id === 'truck' && G.hero.truck >= MAX_TRUCK) || (it.id === 'miner' && G.miners.length >= MAX_MINERS) || (it.id === 'jack' && G.jacks.length >= JACK.max) || (it.id === 'medic' && G.medics.length >= MEDIC.max) || (it.id === 'brick' && G.makers.length >= BRICK.max) || (it.id === 'layer' && G.layers.length >= LAYER.max);
     const dx = G.deny[it.id] > 0 ? Math.sin(G.deny[it.id] * 60) * 4 : 0;
     rr(x + dx, y, w, h, 14);
-    ctx.fillStyle = ok ? (it.id === 'truck' ? '#0e7490' : it.id === 'miner' ? '#a16207' : it.id === 'jack' ? '#15803d' : it.id === 'medic' ? '#be123c' : it.id === 'brick' ? '#c2410c' : it.id === 'all' ? '#7e22ce' : '#1d4ed8') : '#334155'; ctx.fill();
+    ctx.fillStyle = ok ? (it.id === 'truck' ? '#0e7490' : it.id === 'miner' ? '#a16207' : it.id === 'jack' ? '#15803d' : it.id === 'medic' ? '#be123c' : it.id === 'brick' ? '#c2410c' : it.id === 'layer' ? '#a16207' : it.id === 'all' ? '#7e22ce' : '#1d4ed8') : '#334155'; ctx.fill();
     ctx.globalAlpha = ok ? 1 : 0.55;
     const name = it.id === 'truck' ? TRUCKS[Math.min(MAX_TRUCK, G.hero.truck + (maxed ? 0 : 1))].name : it.name;
-    const count = it.id === 'miner' ? G.miners.length + '/' + MAX_MINERS : it.id === 'jack' ? G.jacks.length + '/' + JACK.max : it.id === 'medic' ? G.medics.length + '/' + MEDIC.max : it.id === 'brick' ? G.makers.length + '/' + BRICK.max : it.id === 'truck' && G.hero.truck > 0 ? G.hero.truck + '/' + MAX_TRUCK : '';
+    const count = it.id === 'miner' ? G.miners.length + '/' + MAX_MINERS : it.id === 'jack' ? G.jacks.length + '/' + JACK.max : it.id === 'medic' ? G.medics.length + '/' + MEDIC.max : it.id === 'brick' ? G.makers.length + '/' + BRICK.max : it.id === 'layer' ? G.layers.length + '/' + LAYER.max : it.id === 'truck' && G.hero.truck > 0 ? G.hero.truck + '/' + MAX_TRUCK : '';
     if (it.id === 'miner') {
       // the Gold Miner button looks just like it always did
       drawEmo(it.icon, x + dx + 32, y + h / 2, 32);
@@ -2329,7 +2400,7 @@ function drawShop() {
       while (fs > 10 && ctx.measureText(name).width > w - 46) { fs--; ctx.font = 'bold ' + fs + 'px ' + FONT; }
       text(name, x + dx + 40, y + 24, fs, '#fff', 'left');
       text(maxed ? 'MAX!' : '🪙 ' + cost, x + dx + 40, y + 47, 15, ok ? '#fde047' : '#cbd5e1', 'left');
-      text((i + 1) + '', x + dx + 8, y + 10, 10, 'rgba(255,255,255,.55)');
+      text(((i + 1) % 10) + '', x + dx + 8, y + 10, 10, 'rgba(255,255,255,.55)');
       if (count) text(count, x + dx + w - 16, y + 10, 10, 'rgba(255,255,255,.75)');
     }
     ctx.globalAlpha = 1;
@@ -2380,7 +2451,8 @@ window.addEventListener('keydown', e => {
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   keys[k] = true;
   if (G && G.state === 'play') {
-    if (k >= '1' && k <= String(SHOP.length)) buy(SHOP[+k - 1].id);
+    const si = '1234567890'.indexOf(k); // keys 1–9, then 0 for the 10th button
+    if (k.length === 1 && si >= 0 && si < SHOP.length) buy(SHOP[si].id);
     if (k === 'p' || k === 'Escape') pauseGame();
     if (k === 'm') toggleMute();
   } else if (G && G.state === 'paused' && (k === 'p' || k === 'Escape')) resumeGame();
