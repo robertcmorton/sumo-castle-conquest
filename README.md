@@ -8,6 +8,7 @@ Open [`index.html`](index.html) in any modern browser, or visit the deployed ver
 
 ## The games
 
+- [`lava-block.html`](lava-block.html): **Lava Block.** The floor is lava! Climb an obstacle course of trampolines, air fans, water jumps and monsters. At the top you get 3 minutes to build a hut out of cubes, with machines that shoot bombs, fire and poison darts, and cameras and a TV. Monsters attack on even levels, and your base stays and grows every level.
 - [`great-wall-getaway.html`](great-wall-getaway.html): **Great Wall Getaway.** Drive your super car, rob banks and escape the police, then fight a war with them at the Great Wall of China: send your crew over the wall and throw bombs, poison darts and TNT. 1000 levels that look more realistic as you go.
 - [`barrier-battle.html`](barrier-battle.html): **Barrier Battle: Blue vs Red.** Chop trees to build your wall, fight off giant animals, and smash the red barrier across 1000 levels.
 - [`sumo-castle.html`](sumo-castle.html): **Sumo Castle Conquest.** Click your tower, then another tower, to send a wave of sumos. A tower at 0 HP becomes yours. Capture the Red Castle to win, and don't let your Blue Castle fall. 100 levels from baby-easy to brutal.
