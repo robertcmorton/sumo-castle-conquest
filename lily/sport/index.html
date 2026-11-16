@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#89cff0">
+  <title>Sport 4 Life</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Fredoka:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-theme="default" class="home-active">
+  <div class="bg-decor" aria-hidden="true">
+    <span class="ball b1">⚽</span>
+    <span class="ball b2">🏀</span>
+    <span class="ball b3">🎾</span>
+    <span class="ball b4">🏐</span>
+    <span class="ball b5">⚾</span>
+    <span class="ball b6">🏈</span>
+    <span class="ball b7">🏉</span>
+    <span class="ball b8">🏏</span>
+    <span class="ball b9">⛳</span>
+    <span class="ball b10">🎳</span>
+    <span class="ball b11">🏒</span>
+    <span class="ball b12">🏑</span>
+    <span class="ball b13">⚽</span>
+    <span class="ball b14">🏀</span>
+    <span class="ball b15">🎾</span>
+    <span class="ball b16">🏐</span>
+    <span class="ball b17">⚾</span>
+    <span class="ball b18">🏈</span>
+    <span class="ball b19">🏉</span>
+    <span class="ball b20">🏏</span>
+    <span class="ball b21">⛳</span>
+    <span class="ball b22">🎳</span>
+    <span class="ball b23">🏒</span>
+    <span class="ball b24">🏑</span>
+  </div>
+
+  <div id="app">
+    <!-- ============ HOME ============ -->
+    <section id="home-screen" class="screen active">
+      <header class="hero">
+        <h1 class="hero-title">Sport 4 Life</h1>
+        <p class="hero-sub">30 minigames · 1–6 players · pass the device</p>
+      </header>
+
+      <div class="hero-row">
+        <div class="symbol-stack">
+          <button class="symbol-btn" data-nav="shop-screen" data-label="Shop" aria-label="Avatar shop">🛍️</button>
+          <button class="symbol-btn" data-nav="wordle-screen" data-label="Wordle" aria-label="Daily Wordle">📝</button>
+        </div>
+
+        <button class="hero-play" data-nav="player-count-screen" id="hero-play">
+          <span class="hero-play-icon">▶</span>
+          <span class="hero-play-text">
+            <span class="hero-play-title">PLAY</span>
+            <span class="hero-play-sub">Pick players &amp; a sport</span>
+          </span>
+        </button>
+
+        <div class="symbol-stack">
+          <button class="symbol-btn" data-nav="leaderboard-screen" data-label="Ranks" aria-label="Leaderboard">🏆</button>
+          <button class="symbol-btn" data-nav="settings-screen" data-label="Settings" aria-label="Settings">⚙️</button>
+        </div>
+      </div>
+
+      <div class="coin-banner">
+        <span class="coin-icon">🪙</span>
+        <span>Group coins: <strong id="home-coin-count">0</strong></span>
+        <span class="coin-hint" id="coin-hint" style="color:var(--text-faint);font-size:12px;margin-left:4px"></span>
+      </div>
+    </section>
+
+    <!-- ============ PLAYER COUNT ============ -->
+    <section id="player-count-screen" class="screen">
+      <button class="back-btn" data-nav="home-screen">← Back</button>
+      <h2 class="screen-title">How many players?</h2>
+      <p class="screen-sub">Everyone takes their turn one after the other.</p>
+      <div class="count-grid">
+        <button class="count-tile" data-count="1">1</button>
+        <button class="count-tile" data-count="2">2</button>
+        <button class="count-tile" data-count="3">3</button>
+        <button class="count-tile" data-count="4">4</button>
+        <button class="count-tile" data-count="5">5</button>
+        <button class="count-tile" data-count="6">6</button>
+      </div>
+    </section>
+
+    <!-- ============ PLAYER NAMES ============ -->
+    <section id="player-names-screen" class="screen">
+      <button class="back-btn" data-nav="player-count-screen">← Back</button>
+      <h2 class="screen-title">Who's playing?</h2>
+      <p class="screen-sub">Tap a name to edit. Each player has their own colour.</p>
+      <div class="player-list" id="player-list"></div>
+      <div class="button-group">
+        <button class="primary" id="names-continue-btn">Continue →</button>
+      </div>
+    </section>
+
+    <!-- ============ GAME SELECT ============ -->
+    <section id="game-select-screen" class="screen">
+      <button class="back-btn" data-nav="player-names-screen">← Back</button>
+      <h2 class="screen-title">Pick a sport</h2>
+      <p class="screen-sub" id="select-sub">Showing games for <span id="select-player-count">2</span> players.</p>
+      <div class="game-grid" id="game-grid"></div>
+    </section>
+
+    <!-- ============ GAME INTRO ============ -->
+    <section id="game-intro-screen" class="screen">
+      <button class="back-btn" data-nav="game-select-screen">← Back</button>
+      <div class="intro-banner" id="intro-banner">
+        <div class="intro-icon" id="intro-icon">⭐</div>
+        <h2 class="intro-title" id="intro-title">Game</h2>
+        <p class="intro-theme" id="intro-theme">Theme</p>
+      </div>
+      <div class="intro-body">
+        <h3>How to play</h3>
+        <p class="instructions" id="intro-instructions"></p>
+        <h3>Controls</h3>
+        <p class="instructions" id="intro-controls"></p>
+        <div class="intro-players" id="intro-players"></div>
+      </div>
+      <div class="button-group">
+        <button class="primary" id="start-game-btn">Start!</button>
+      </div>
+    </section>
+
+    <!-- ============ GAME ============ -->
+    <section id="game-screen" class="screen">
+      <header id="game-hud">
+        <span id="game-title">Game</span>
+        <span id="game-status"></span>
+        <button class="text small" id="quit-btn">Quit</button>
+      </header>
+      <div id="game-stage">
+        <canvas id="game-canvas"></canvas>
+        <div id="game-overlay"></div>
+      </div>
+      <div id="game-controller" class="controller"></div>
+    </section>
+
+    <!-- ============ RESULTS ============ -->
+    <section id="results-screen" class="screen">
+      <h2 class="screen-title">Final Scores</h2>
+      <p class="screen-sub" id="results-game-name"></p>
+      <div class="podium" id="podium"></div>
+      <div class="results-list" id="results-list"></div>
+      <p class="coin-earned" id="coin-earned"></p>
+      <div class="button-group results-actions">
+        <button class="primary" id="play-again-btn">Play again</button>
+        <button class="secondary" id="pick-another-btn">Pick another</button>
+        <button class="text" id="results-home-btn">Home</button>
+      </div>
+    </section>
+
+    <!-- ============ DAILY WORDLE ============ -->
+    <section id="wordle-screen" class="screen">
+      <button class="back-btn" data-nav="home-screen">← Back</button>
+      <h2 class="screen-title">Sport Wordle</h2>
+      <p class="screen-sub">Guess today's 5-letter sport word in 6 tries.</p>
+      <div class="wordle-card">
+        <div class="wordle-meta">
+          <span id="wordle-date">Today</span>
+          <span class="wordle-streak" id="wordle-streak" hidden>🔥 <strong id="wordle-streak-count">0</strong></span>
+        </div>
+        <div class="wordle-grid" id="wordle-grid"></div>
+        <div class="wordle-msg" id="wordle-msg"></div>
+        <div class="wordle-result" id="wordle-result" hidden></div>
+        <div class="wordle-keyboard" id="wordle-keyboard"></div>
+      </div>
+    </section>
+
+    <!-- ============ SHOP ============ -->
+    <section id="shop-screen" class="screen">
+      <button class="back-btn" data-nav="home-screen">← Back</button>
+      <h2 class="screen-title">Avatar Shop</h2>
+      <p class="shop-balance">Group coins: <span class="coin-icon">🪙</span> <span id="shop-coin-count">0</span></p>
+      <div class="shop-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="owned">Owned</button>
+        <button class="filter-btn" data-filter="affordable">Affordable</button>
+      </div>
+      <div class="avatar-grid" id="avatar-grid"></div>
+    </section>
+
+    <!-- ============ LEADERBOARD ============ -->
+    <section id="leaderboard-screen" class="screen">
+      <button class="back-btn" data-nav="home-screen">← Back</button>
+      <h2 class="screen-title">Leaderboard</h2>
+      <p class="screen-sub">Cumulative scores from this device.</p>
+      <div class="leaderboard-filters">
+        <button class="filter-btn active" data-lb-filter="all">All games</button>
+        <button class="filter-btn" data-lb-filter="wins">Wins</button>
+      </div>
+      <div class="leaderboard-list" id="leaderboard-list"></div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section id="settings-screen" class="screen">
+      <button class="back-btn" data-nav="home-screen">← Back</button>
+      <h2 class="screen-title">Settings</h2>
+      <div class="settings-list">
+        <label class="setting-row">
+          <span>Sound</span>
+          <input type="checkbox" id="setting-sound" checked>
+        </label>
+        <label class="setting-row">
+          <span>Haptics (mobile)</span>
+          <input type="checkbox" id="setting-haptics" checked>
+        </label>
+        <button class="danger" id="reset-btn">Reset all progress</button>
+      </div>
+      <p class="footer-note">Progress saves to this browser only. v0.3 · pass-the-device · turn-based</p>
+    </section>
+  </div>
+
+  <!-- toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- Order: utilities → systems → games → app -->
+  <script src="js/storage.js"></script>
+  <script src="js/themes.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/players.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/leaderboard.js"></script>
+  <script src="js/ui/meters.js"></script>
+  <script src="js/games/_registry.js"></script>
+  <!-- 30 minigames -->
+  <script src="js/games/stack.js"></script>
+  <script src="js/games/sprint100m.js"></script>
+  <script src="js/games/penalty.js"></script>
+  <script src="js/games/archery.js"></script>
+  <script src="js/games/javelin.js"></script>
+  <script src="js/games/longjump.js"></script>
+  <script src="js/games/putting.js"></script>
+  <script src="js/games/threepoint.js"></script>
+  <script src="js/games/bowling.js"></script>
+  <script src="js/games/slalom.js"></script>
+  <script src="js/games/boxing.js"></script>
+  <script src="js/games/sumo.js"></script>
+  <script src="js/games/shotput.js"></script>
+  <script src="js/games/cricket.js"></script>
+  <script src="js/games/tennis.js"></script>
+  <script src="js/games/swimming.js"></script>
+  <script src="js/games/hockey.js"></script>
+  <script src="js/games/baseball.js"></script>
+  <script src="js/games/hurdles.js"></script>
+  <script src="js/games/darts.js"></script>
+  <script src="js/games/skateboard.js"></script>
+  <script src="js/games/curling.js"></script>
+  <script src="js/games/cycling.js"></script>
+  <script src="js/games/volleyball.js"></script>
+  <script src="js/games/rugby.js"></script>
+  <script src="js/games/diving.js"></script>
+  <script src="js/games/surfing.js"></script>
+  <script src="js/games/waterpolo.js"></script>
+  <script src="js/games/marathon.js"></script>
+  <script src="js/games/golfdrive.js"></script>
+  <script src="js/wordle.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

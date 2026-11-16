@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Splash Slides</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { background: #7dd3fc; font-family: 'Baloo 2', Fredoka, system-ui, sans-serif; color: #1f2937; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  #game { position: fixed; inset: 0; display: block; touch-action: none; }
+  .ov { position: fixed; inset: 0; z-index: 10; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; padding: 76px 16px 28px;
+        background: linear-gradient(180deg, rgba(14,165,233,.50), rgba(236,72,153,.38)); -webkit-overflow-scrolling: touch; }
+  .ov[hidden] { display: none; }
+  @media (max-width: 640px) { .ov { padding-top: 100px; } }
+  .wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 14px; }
+  .card { background: rgba(255,255,255,.95); border-radius: 22px; padding: 14px 16px; box-shadow: 0 8px 26px rgba(15,23,42,.18); min-width: 0; }
+  h1, h2, h3 { font-family: Fredoka, sans-serif; margin: 0; }
+  h1 { font-size: clamp(32px, 8vw, 54px); line-height: 1; background: linear-gradient(90deg,#0ea5e9,#8b5cf6,#ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h3 { font-size: 20px; margin-bottom: 8px; }
+  .hero { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+  .hero p { margin: 6px 0 10px; font-size: 17px; line-height: 1.3; }
+  #me { width: 150px; height: 165px; background: linear-gradient(#bae6fd, #fce7f3); border-radius: 18px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn { border: 0; border-radius: 999px; padding: 8px 14px; font: 600 16px Fredoka, sans-serif; cursor: pointer; background: #f1f5f9; color: #1f2937; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .btn.pink { background: linear-gradient(90deg,#8b5cf6,#ec4899); color: #fff; }
+  .go { display: block; width: 100%; border: 0; border-radius: 22px; padding: 16px; font: 700 26px Fredoka, sans-serif; color: #fff; cursor: pointer;
+        background: linear-gradient(90deg,#06b6d4,#3b82f6,#8b5cf6); box-shadow: 0 6px 0 #1e3a8a, 0 10px 24px rgba(0,0,0,.25); }
+  .go:active { transform: translateY(3px); box-shadow: 0 3px 0 #1e3a8a; }
+  .parks { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .pcard { position: relative; border: 3px solid transparent; border-radius: 18px; padding: 10px 8px; cursor: pointer; text-align: center; color: #fff;
+           font: 600 16px Fredoka, sans-serif; text-shadow: 0 1px 3px rgba(0,0,0,.45); min-height: 92px; }
+  .pcard .em { font-size: 32px; display: block; }
+  .pcard small { display: block; font-size: 13px; opacity: .95; }
+  .pcard.on { border-color: #fff; box-shadow: 0 0 0 3px #8b5cf6, 0 6px 16px rgba(0,0,0,.2); }
+  .pcard.locked { filter: grayscale(.85); opacity: .75; cursor: default; }
+  .chart .ch-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-family: Fredoka; }
+  .chart .ch-head b { font-size: 20px; }
+  .chart .ch-total { font-size: 24px; font-weight: 700; color: #7c3aed; }
+  .ch-track { position: relative; height: 26px; border-radius: 999px; background: #e0e7ff; margin: 30px 10px 26px; }
+  .ch-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg,#22d3ee,#8b5cf6,#ec4899); transition: width 1.8s cubic-bezier(.3,.8,.3,1); }
+  .ch-mk { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 3px solid #c7d2fe;
+           display: grid; place-items: center; font-size: 17px; transition: transform .3s, border-color .3s; }
+  .ch-mk span { position: absolute; top: 34px; font: 600 12px Fredoka; color: #475569; white-space: nowrap; }
+  .ch-mk.got { border-color: #facc15; background: #fef9c3; }
+  .ch-mk.pop { animation: mkpop .6s; }
+  @keyframes mkpop { 50% { transform: translate(-50%,-50%) scale(1.5); } }
+  .ch-next { font-size: 15px; color: #475569; text-align: center; }
+  table.top { width: 100%; border-collapse: collapse; font-size: 16px; }
+  table.top td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; }
+  table.top td:first-child { width: 34px; font-weight: 700; color: #7c3aed; }
+  table.top td:last-child { text-align: right; font-weight: 700; }
+  table.top tr.you { background: #fef3c7; }
+  .res-head { text-align: center; }
+  .res-head .medal { font-size: 64px; line-height: 1; }
+  .res-head h2 { font-size: clamp(30px, 8vw, 44px); }
+  .lines { display: grid; gap: 4px; font-size: 17px; }
+  .lines div { display: flex; justify-content: space-between; gap: 8px; }
+  .lines .tot { font-size: 22px; font-weight: 800; color: #7c3aed; border-top: 2px dashed #e5e7eb; padding-top: 6px; }
+  .gain { text-align: center; font: 600 19px Fredoka; margin-top: 8px; }
+  #act { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 5; display: none;
+         border: 0; border-radius: 999px; padding: 14px 26px; font: 700 22px Fredoka, sans-serif; color: #fff; touch-action: none;
+         background: linear-gradient(90deg,#f59e0b,#ec4899); box-shadow: 0 5px 0 #9d174d, 0 8px 20px rgba(0,0,0,.25); }
+  #act:active { transform: translateX(-50%) translateY(3px); }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<button id="act">🚀 Boost</button>
+
+<div id="menu" class="ov">
+  <div class="wrap">
+    <div class="card hero">
+      <div>
+        <h1>Splash Slides</h1>
+        <p>Race 5 rivals down <b>3 sections</b>: a twisty flume, a dark tunnel of rapids, then <b>launch</b> with your glider into the big pool!</p>
+        <div class="row">
+          <button class="btn pink" data-shop="look">👕 My look</button>
+          <button class="btn pink" data-shop="floatie">🛟 Floatie</button>
+          <button class="btn pink" data-shop="glider">🪁 Glider</button>
+        </div>
+      </div>
+      <canvas id="me" width="300" height="330"></canvas>
+    </div>
+    <div class="card">
+      <h3>🗺️ Pick a water park</h3>
+      <div class="parks" id="parks"></div>
+    </div>
+    <button class="go" id="goBtn">🏁 Race!</button>
+    <div class="card" id="menuChart"></div>
+  </div>
+</div>
+
+<div id="results" class="ov" hidden></div>
+
+<script src="park.js"></script>
+<script src="slides.js"></script>
+</body>
+</html>

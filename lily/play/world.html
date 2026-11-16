@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Colour the World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --top: 62px; --ink: #1f2937; --soft: #64748b; --card: #ffffff; --accent: #8b5cf6; --pink: #ec4899; }
+  @media (max-width: 640px) { :root { --top: 100px; } }
+  * { box-sizing: border-box; }
+  html { overflow-x: hidden; }
+  body { margin: 0; min-height: 100vh; background: linear-gradient(180deg, #bae6fd 0%, #e0f2fe 45%, #fdf4ff 100%); background-color: #e0f2fe;
+    font-family: Fredoka, system-ui, sans-serif; color: var(--ink); overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+  body.playing { overflow: hidden; }
+  h1, h2, h3 { font-family: 'Baloo 2', Fredoka, sans-serif; }
+  button { font-family: Fredoka, system-ui, sans-serif; }
+
+  /* ---------- world map screen ---------- */
+  #mapScreen { max-width: 1100px; margin: 0 auto; padding: var(--top) 12px 40px; }
+  .hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 4px 2px 10px; }
+  .hero h1 { margin: 0; font-size: clamp(24px, 5vw, 36px); line-height: 1.05; color: #312e81; }
+  .hero h1 span { background: linear-gradient(90deg,#ef4444,#f59e0b,#22c55e,#3b82f6,#a855f7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .worldpct { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 999px; padding: 6px 16px 6px 8px; box-shadow: 0 3px 12px rgba(30,41,59,.1); }
+  .worldpct .ring { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+  .worldpct .ring b { background: #fff; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; }
+  .worldpct small { display: block; color: var(--soft); font-size: 13px; }
+  .card { background: var(--card); border-radius: 22px; box-shadow: 0 4px 18px rgba(30,41,59,.1); }
+  .mapwrap { position: relative; padding: 8px; }
+  #worldMap { display: block; width: 100%; border-radius: 16px; background: #7dd3fc; touch-action: pan-y; cursor: pointer; }
+  .zoombtns { position: absolute; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+  .zoombtns button { width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(255,255,255,.95); font-size: 20px; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,.2); cursor: pointer; color: var(--ink); }
+  .maphint { position: absolute; left: 18px; bottom: 16px; background: rgba(255,255,255,.88); border-radius: 999px; padding: 3px 10px; font-size: 13px; color: var(--soft); pointer-events: none; }
+  .status { position: absolute; inset: 8px; border-radius: 16px; display: grid; place-items: center; text-align: center; padding: 16px; background: rgba(224,242,254,.92); font-size: 18px; }
+  .status[hidden] { display: none; }
+  .status .big { font-size: 40px; display: block; }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+  @media (max-width: 760px) { .row2 { grid-template-columns: minmax(0, 1fr); } }
+  .pad { padding: 14px 16px; }
+  .card h3 { margin: 0 0 8px; font-size: 21px; }
+  #pick { display: flex; flex-direction: column; gap: 8px; }
+  #pick .name { font-family: 'Baloo 2', sans-serif; font-size: 28px; font-weight: 800; line-height: 1.05; margin: 0; overflow-wrap: anywhere; }
+  #pick .facts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: #f1f5f9; border-radius: 999px; padding: 4px 10px; font-size: 14px; white-space: nowrap; }
+  .chip.done { background: #dcfce7; color: #166534; }
+  .play { border: 0; border-radius: 999px; padding: 12px 22px; font-size: 22px; font-weight: 700; color: #fff; cursor: pointer;
+    background: linear-gradient(90deg,#22c55e,#14b8a6); box-shadow: 0 4px 0 #0f766e, 0 6px 14px rgba(0,0,0,.15); align-self: flex-start; }
+  .play:active { transform: translateY(3px); box-shadow: 0 1px 0 #0f766e; }
+  .next { display: flex; flex-wrap: wrap; gap: 6px; }
+  .next button, .clist button { border: 2px solid #e2e8f0; background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 15px; cursor: pointer; color: var(--ink); }
+  .next button:hover, .clist button:hover { border-color: var(--accent); }
+  .conts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .cont { border: 2px solid transparent; background: #f8fafc; border-radius: 16px; padding: 8px 10px; text-align: left; cursor: pointer; color: var(--ink); font-size: 15px; }
+  .cont.on { border-color: var(--accent); background: #f5f3ff; }
+  .cont .bar, .hbar { height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 5px; }
+  .cont .bar i { display: block; height: 100%; background: linear-gradient(90deg,#f59e0b,#ec4899); border-radius: 999px; }
+  .cont small { color: var(--soft); }
+  .search { width: 100%; font: 17px Fredoka, sans-serif; padding: 10px 14px; border-radius: 999px; border: 2px solid #e2e8f0; outline: none; margin-bottom: 10px; }
+  .search:focus { border-color: var(--accent); }
+  .clist { display: flex; flex-wrap: wrap; gap: 6px; max-height: 340px; overflow-y: auto; padding: 2px; }
+  .clist button.d { background: #f0fdf4; border-color: #86efac; }
+  .clist button.sel, .next button.sel { border-color: var(--pink); background: #fdf2f8; }
+  .muted { color: var(--soft); font-size: 14px; }
+
+  /* ---------- play screen ---------- */
+  #playScreen { position: fixed; left: 0; right: 0; bottom: 0; top: 0; background: #5ec3ef; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #playScreen[hidden] { display: none; }
+  #game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .hud { position: absolute; left: 10px; right: 10px; top: var(--top); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; pointer-events: none; }
+  .hud > * { pointer-events: auto; }
+  .hbtn { border: 0; border-radius: 999px; background: rgba(255,255,255,.95); padding: 8px 14px; font-size: 16px; font-weight: 600; box-shadow: 0 2px 10px rgba(0,0,0,.15); cursor: pointer; color: var(--ink); }
+  .hcard { background: rgba(255,255,255,.95); border-radius: 18px; padding: 6px 12px; box-shadow: 0 2px 10px rgba(0,0,0,.15); min-width: 0; flex: 1 1 220px; max-width: 420px; }
+  .hcard .top { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; white-space: nowrap; }
+  .hcard .top b { overflow: hidden; text-overflow: ellipsis; }
+  .hbar { position: relative; height: 14px; margin-top: 4px; }
+  .hbar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; transition: width .25s; }
+  .hbar .goal { position: absolute; top: -3px; bottom: -3px; width: 3px; background: #1f2937; border-radius: 2px; }
+  .hearts { font-size: 20px; background: rgba(255,255,255,.95); border-radius: 999px; padding: 4px 10px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  .startov { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; padding: 16px; }
+  .startov div { background: rgba(255,255,255,.95); border-radius: 22px; padding: 16px 22px; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,.2); max-width: 420px; font-size: 17px; }
+  .startov h2 { margin: 0 0 4px; font-size: 28px; }
+  .startov[hidden] { display: none; }
+  .mbtns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .mbtns button { border: 0; border-radius: 999px; padding: 10px 18px; font-size: 18px; font-weight: 600; cursor: pointer; background: #f1f5f9; color: var(--ink); }
+  .mbtns button.go { background: linear-gradient(90deg,#22c55e,#14b8a6); color: #fff; }
+  .bigmsg { font-size: 18px; line-height: 1.5; }
+  .bigmsg .reward { font-size: 22px; font-weight: 700; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <div id="mapScreen">
+    <div class="hero">
+      <h1>Colour the <span>World</span>!</h1>
+      <div class="worldpct"><div class="ring" id="ring"><b id="ringPct">0%</b></div><div><b id="doneCount">0 countries</b><small id="doneSub">Pick a country to start!</small></div></div>
+    </div>
+    <div class="card mapwrap">
+      <canvas id="worldMap"></canvas>
+      <div class="maphint" id="maphint">Tap a country</div>
+      <div class="zoombtns"><button id="zin" title="Zoom in">+</button><button id="zout" title="Zoom out">−</button></div>
+      <div class="status" id="status"><div><span class="big">🌍</span>Unrolling the world map…</div></div>
+    </div>
+    <div class="row2">
+      <div class="card pad" id="pick"><p class="muted">Loading…</p></div>
+      <div class="card pad">
+        <h3>⭐ Try these next</h3>
+        <div class="next" id="next"></div>
+        <p class="muted" style="margin:8px 0 0">Small countries are the easiest. You can play any country you like!</p>
+      </div>
+    </div>
+    <div class="card pad" style="margin-top:12px">
+      <h3>🧭 Continents</h3>
+      <div class="conts" id="conts"></div>
+    </div>
+    <div class="card pad" style="margin-top:12px">
+      <h3>🔎 Find a country</h3>
+      <input class="search" id="search" type="search" placeholder="Type a name… (e.g. Japan)" autocomplete="off">
+      <div class="clist" id="clist"></div>
+    </div>
+  </div>
+
+  <div id="playScreen" hidden>
+    <canvas id="game"></canvas>
+    <div class="hud">
+      <button class="hbtn" id="backBtn">⬅ Map</button>
+      <div class="hcard"><div class="top"><b id="hName">Country</b><span id="hPct">0% / 70%</span></div><div class="hbar"><i id="hFill"></i><span class="goal" id="hGoal"></span></div></div>
+      <span class="hearts" id="hHearts">❤️❤️❤️</span>
+    </div>
+    <div class="startov" id="startov"><div><h2 id="sTitle">Ready?</h2><p id="sText" style="margin:6px 0"></p><b>Press an arrow key, or touch and slide to go!</b></div></div>
+  </div>
+
+  <script src="park.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+  <script src="world.js"></script>
+</body>
+</html>

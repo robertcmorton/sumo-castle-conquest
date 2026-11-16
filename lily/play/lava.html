@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Lava Leap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #3b1d4a; font-family: Fredoka, system-ui, sans-serif; color: #1f2937; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  * { box-sizing: border-box; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .ll-scr { position: fixed; left: 0; right: 0; bottom: 0; top: var(--top, 64px); overflow-y: auto; overflow-x: hidden; padding: 10px 16px 30px; -webkit-overflow-scrolling: touch; }
+  .ll-scr[hidden], #hud[hidden], #pad[hidden] { display: none !important; }
+  .ll-card { max-width: 480px; margin: 0 auto; background: rgba(255,255,255,.94); border-radius: 26px; padding: 18px 18px 20px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+  .ll-card.wide { max-width: 760px; }
+  .ll-title { font-family: 'Baloo 2', Fredoka, sans-serif; font-weight: 800; font-size: clamp(42px, 12vw, 64px); line-height: 1; margin: 4px 0 6px;
+    background: linear-gradient(180deg, #fde047, #f97316 55%, #dc2626); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-stroke: 1.5px #7c2d12; }
+  .ll-sub { margin: 0 0 6px; font-size: 17px; }
+  #homeAv { width: 120px; height: 120px; display: block; margin: 0 auto; }
+  .ll-modes { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 6px 0; }
+  .ll-modes button { border: 2px solid #e5e7eb; background: #fff; border-radius: 999px; padding: 8px 14px; font: 600 16px Fredoka, sans-serif; cursor: pointer; color: #1f2937; }
+  .ll-modes button.on { background: #f97316; border-color: #f97316; color: #fff; }
+  .ll-modehelp { font-size: 15px; color: #475569; margin: 4px 0 12px; min-height: 2.4em; }
+  .ll-btn { border: 0; border-radius: 999px; padding: 10px 18px; font: 600 17px Fredoka, sans-serif; cursor: pointer; background: #f1f5f9; color: #1f2937; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .ll-btn.big { background: linear-gradient(90deg, #f97316, #ec4899); color: #fff; font-size: 22px; padding: 12px 26px; }
+  .ll-btn.sm { padding: 8px 14px; }
+  .ll-btn:disabled { opacity: .35; cursor: default; }
+  .ll-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+  .ll-stats { margin: 14px 0 0; color: #64748b; font-size: 15px; }
+  .ll-maphead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .ll-maphead h2 { margin: 0; font-size: 22px; }
+  .ll-maphead small { display: block; font-size: 14px; color: #64748b; font-weight: 400; }
+  .ll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 7px; margin-top: 10px; }
+  .ll-cell { border: 0; border-radius: 14px; padding: 6px 2px; background: linear-gradient(180deg, #fed7aa, #fb923c); font-family: Fredoka, sans-serif; cursor: pointer; display: flex; flex-direction: column; align-items: center; color: #7c2d12; box-shadow: 0 2px 0 #c2410c; }
+  .ll-cell b { font-size: 19px; }
+  .ll-cell i { font-style: normal; font-size: 10px; min-height: 13px; white-space: nowrap; }
+  .ll-cell.locked { background: #e2e8f0; color: #94a3b8; box-shadow: none; cursor: default; }
+  .ll-cell.cur { animation: llpulse 1s infinite alternate; background: linear-gradient(180deg, #fef08a, #facc15); }
+  @keyframes llpulse { to { transform: scale(1.08); } }
+  #hud { position: fixed; top: var(--top, 64px); left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; pointer-events: none; z-index: 10; }
+  #hud > * { pointer-events: auto; }
+  .ll-pill { background: rgba(255,255,255,.92); border-radius: 999px; padding: 6px 14px; font-size: 17px; font-weight: 600; box-shadow: 0 2px 10px rgba(0,0,0,.15); white-space: nowrap; }
+  .ll-hbtns { display: flex; gap: 6px; align-items: center; }
+  .ll-hbtns button { border: 0; background: rgba(255,255,255,.92); border-radius: 50%; width: 42px; height: 42px; font-size: 19px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  #pad { position: fixed; left: 0; right: 0; bottom: 0; padding: 0 14px max(14px, env(safe-area-inset-bottom)); display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none; z-index: 10; }
+  #pad > div { display: flex; gap: 12px; pointer-events: auto; }
+  #pad button { width: 76px; height: 76px; border-radius: 50%; border: 3px solid rgba(255,255,255,.85); background: rgba(30,41,59,.45); color: #fff; font-size: 32px; touch-action: none; -webkit-user-select: none; user-select: none; font-family: Fredoka, sans-serif; }
+  #pad button.jump { width: 92px; height: 92px; background: rgba(249,115,22,.6); font-size: 38px; }
+  #pad button.on { background: rgba(255,255,255,.55); transform: scale(.94); }
+  @media (max-width: 420px) { #pad button { width: 66px; height: 66px; } #pad button.jump { width: 82px; height: 82px; } .ll-pill { font-size: 15px; padding: 5px 11px; } }
+  .ll-res { text-align: center; font-size: 17px; }
+  .ll-res p { margin: 6px 0; }
+  .ll-res small { color: #64748b; }
+  .ll-stars { font-size: 44px; letter-spacing: 4px; }
+  .ll-stars .dim { filter: grayscale(1); opacity: .3; }
+  .ll-coins { font-size: 26px; font-weight: 700; color: #b45309; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="home" class="ll-scr"></div>
+<div id="map" class="ll-scr" hidden></div>
+<div id="hud" hidden>
+  <span class="ll-pill" id="hudLv">Level 1</span>
+  <div class="ll-hbtns"><span class="ll-pill" id="hudTime">⏱ 0.0s</span><button id="hudRestart" title="Restart level">↺</button><button id="hudPause" title="Pause">⏸</button></div>
+</div>
+<div id="pad" hidden>
+  <div><button data-k="left" aria-label="Left">◀</button><button data-k="right" aria-label="Right">▶</button></div>
+  <div><button data-k="jump" class="jump" aria-label="Jump">⤒</button></div>
+</div>
+<script src="park.js"></script>
+<script src="lava.js"></script>
+</body>
+</html>

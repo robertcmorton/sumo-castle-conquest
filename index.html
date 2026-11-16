@@ -80,6 +80,12 @@ h1 .wiggle { display: inline-block; animation: wiggle 2.4s ease-in-out infinite;
   font-size: .85em; font-weight: bold; transform: rotate(8deg);
   box-shadow: 0 4px 10px rgba(0,0,0,.25);
 }
+.section { max-width: 1040px; margin: 0 auto 34px; }
+.section h2 {
+  font-size: clamp(1.5em, 5vw, 2.1em); margin: 0 4px 16px;
+  text-shadow: 0 4px 0 #1e3a8a, 0 8px 18px rgba(0,0,0,.3);
+}
+.section h2 small { font-size: .5em; opacity: .85; font-weight: normal; margin-left: 8px; text-shadow: none; }
 footer { text-align: center; margin-top: 36px; opacity: .75; font-size: .9em; }
 @media (prefers-reduced-motion: reduce) {
   h1 .wiggle, .card:hover .emoji { animation: none; }
@@ -93,16 +99,23 @@ footer { text-align: center; margin-top: 36px; opacity: .75; font-size: .9em; }
   <div class="tagline">Pick a game to play!</div>
 </header>
 
-<main class="grid" id="grid"></main>
+<main id="sections"></main>
 
-<footer>Games designed by Leo &middot; built with Claude</footer>
+<footer>Games designed by Leo, Lily and Dad &middot; built with Claude<br>Every game keeps its own scores and levels, saved on this device.</footer>
 
 <script>
 'use strict';
 function read(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 function readJSON(key) { try { return JSON.parse(read(key) || 'null'); } catch (e) { return null; } }
 
-// Add new games here — newest first.
+// Sections on the page, in order
+const GROUPS = [
+  { id: 'leo', name: "🎮 Leo's games", note: 'designed by Leo' },
+  { id: 'lily', name: "🌸 Lily's games", note: 'designed by Lily' },
+  { id: 'dad', name: "🛒 Dad's game", note: 'made by Dad' },
+];
+
+// Add new games here — newest first. Each game saves under its own name, so scores and levels never mix.
 const GAMES = [
   {
     file: 'lava-block.html', emoji: '🌋', name: 'Lava Block',
@@ -162,17 +175,54 @@ const GAMES = [
     bg: 'linear-gradient(160deg, #facc15, #d97706)', edge: '#92400e',
     progress() { return ''; },
   },
+
+  // Lily's games: copied into lily/ and played through play.html (it adds the 🏠 button)
+  { group: 'lily', file: 'play.html?g=launch', emoji: '🚀', name: 'Launch!',
+    desc: 'Blast off with maths! Solve sums to fly through space and play minigames.',
+    bg: 'linear-gradient(135deg, #312e81, #7c3aed 60%, #f472b6)', edge: '#2e1065' },
+  { group: 'lily', file: 'play.html?g=sport', emoji: '🏅', name: 'Sport 4 Life',
+    desc: '30 sport minigames to play with friends and family. Win medals!',
+    bg: 'linear-gradient(135deg, #f97316, #facc15 60%, #4ade80)', edge: '#9a3412' },
+  { group: 'lily', file: 'play.html?g=pizza', emoji: '🍕', name: "Lily's Pizzeria",
+    desc: 'Make, bake and serve pizzas just how the customers ordered them.',
+    bg: 'linear-gradient(135deg, #fca5a5, #f97316 60%, #fde047)', edge: '#991b1b' },
+  { group: 'lily', file: 'play.html?g=hotel', emoji: '🏨', name: 'Sparkle Suites',
+    desc: 'Clean the hotel to earn money, then build it bigger and hire helpers.',
+    bg: 'linear-gradient(135deg, #a5b4fc, #c4b5fd 60%, #fbcfe8)', edge: '#3730a3' },
+  { group: 'lily', file: 'play.html?g=slides', emoji: '🛝', name: 'Splash Slides',
+    desc: 'Race down waterslides and glide into the pool. Climb the chart!',
+    bg: 'linear-gradient(135deg, #22d3ee, #3b82f6 60%, #a78bfa)', edge: '#1e3a8a' },
+  { group: 'lily', file: 'play.html?g=world', emoji: '🗺️', name: 'Colour the World',
+    desc: 'Claim land, country by country, until the whole map is yours.',
+    bg: 'linear-gradient(135deg, #86efac, #38bdf8 60%, #fde68a)', edge: '#166534' },
+  { group: 'lily', file: 'play.html?g=lava', emoji: '🌋', name: 'Lava Leap',
+    desc: 'The floor is lava! Jump across spinning, moving bits and race your rivals.',
+    bg: 'linear-gradient(135deg, #fde047, #f97316 50%, #b91c1c)', edge: '#7f1d1d' },
+
+  // Dad's game: played from its own website so the best-times board works
+  { group: 'dad', file: 'play.html?g=kart', emoji: '🛒', name: 'Crew Kart',
+    desc: 'Push a film-crew cart round a studio lot and race six rival crews!',
+    bg: 'linear-gradient(135deg, #0f172a, #f59e0b 55%, #fde68a)', edge: '#78350f' },
 ];
 
-const grid = document.getElementById('grid');
+const sections = document.getElementById('sections');
+const grids = {};
+for (const gr of GROUPS) {
+  const sec = document.createElement('section');
+  sec.className = 'section';
+  sec.innerHTML = '<h2>' + gr.name + ' <small>' + gr.note + '</small></h2><div class="grid"></div>';
+  sections.appendChild(sec);
+  grids[gr.id] = sec.querySelector('.grid');
+}
 for (const g of GAMES) {
+  const grid = grids[g.group || 'leo'];
   const a = document.createElement('a');
   a.className = 'card';
   a.href = g.file;
   a.style.setProperty('--bg', g.bg);
   a.style.setProperty('--edge', g.edge);
   let progress = '';
-  try { progress = g.progress(); } catch (e) {}
+  try { if (g.progress) progress = g.progress(); } catch (e) {}
   a.innerHTML =
     (g.badge ? '<span class="badge">' + g.badge + '</span>' : '') +
     '<div class="emoji" aria-hidden="true">' + g.emoji + '</div>' +

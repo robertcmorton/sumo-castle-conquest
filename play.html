@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Play</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: #000; overflow: hidden; }
+iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+#home {
+  position: fixed; z-index: 10; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  border: 3px solid #fff; border-radius: 999px; padding: 6px 16px 6px 12px;
+  background: linear-gradient(90deg, #2563eb, #7c3aed); color: #fff; text-decoration: none;
+  font: bold 16px 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+  box-shadow: 0 4px 14px rgba(0,0,0,.3); opacity: .92;
+}
+#home:hover { opacity: 1; }
+#oops { position: fixed; inset: 0; display: grid; place-items: center; color: #fff; font: bold 20px sans-serif; text-align: center; padding: 20px; }
+#oops a { color: #fde047; }
+</style>
+</head>
+<body>
+<a id="home" href="index.html" title="Back to all the games">🏠 Games</a>
+<script>
+'use strict';
+// Lily's games are copied into lily/ (each keeps its own saves). Crew Kart plays from its own website,
+// so its shared best-times board keeps working.
+const GAMES = {
+  launch: { name: 'Launch!', url: 'lily/launch/index.html' },
+  sport:  { name: 'Sport 4 Life', url: 'lily/sport/index.html' },
+  pizza:  { name: "Lily's Pizzeria", url: 'lily/play/pizza.html' },
+  hotel:  { name: 'Sparkle Suites', url: 'lily/play/hotel.html' },
+  slides: { name: 'Splash Slides', url: 'lily/play/slides.html' },
+  world:  { name: 'Colour the World', url: 'lily/play/world.html' },
+  lava:   { name: 'Lava Leap', url: 'lily/play/lava.html' },
+  kart:   { name: 'Crew Kart', url: 'https://magliner-kart.vercel.app/' },
+};
+const g = GAMES[new URLSearchParams(location.search).get('g')];
+if (!g) {
+  document.body.insertAdjacentHTML('beforeend', '<div id="oops">Can\'t find that game.<br><br><a href="index.html">🏠 Back to all the games</a></div>');
+} else {
+  document.title = g.name;
+  const f = document.createElement('iframe');
+  f.src = g.url; f.title = g.name;
+  f.allow = 'fullscreen; autoplay; gamepad; clipboard-write';
+  f.addEventListener('load', () => { try { f.contentWindow.focus(); } catch (e) { f.focus(); } });
+  document.body.appendChild(f);
+}
+</script>
+</body>
+</html>

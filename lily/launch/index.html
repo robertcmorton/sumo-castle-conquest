@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1e40af">
+  <title>Launch!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Fredoka:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="bg-decor" aria-hidden="true">
+    <span class="decor cloud cloud-1">☁️</span>
+    <span class="decor cloud cloud-2">☁️</span>
+    <span class="decor star star-1">✨</span>
+    <span class="decor star star-2">⭐</span>
+    <span class="decor planet planet-1">🪐</span>
+    <span class="decor rocket">🚀</span>
+    <span class="decor sparkle">💫</span>
+  </div>
+  <div id="confetti-container" aria-hidden="true"></div>
+
+  <div id="app">
+    <header id="hud">
+      <div class="hud-left">
+        <span class="avatar-display" id="avatar-display" aria-label="Selected avatar">🐰</span>
+        <div class="hud-name-block">
+          <span class="player-name">Math Quester</span>
+          <span class="tier-chip" id="hud-tier"><span id="hud-tier-icon">🌱</span> <span id="hud-tier-name">Starter</span></span>
+        </div>
+      </div>
+      <div class="hud-right">
+        <span class="diamond-display" aria-label="Diamonds">
+          <span class="diamond-icon">💎</span>
+          <span id="diamond-count">0</span>
+        </span>
+        <span class="level-display">Lvl <span id="level-count">1</span></span>
+      </div>
+    </header>
+
+    <main id="screen-container">
+      <!-- HOME -->
+      <section id="home-screen" class="screen active">
+        <div class="profile-card">
+          <div class="profile-avatar" id="profile-avatar">🐰</div>
+          <div class="profile-info">
+            <h1 class="profile-title">Launch!</h1>
+            <div class="profile-meta">
+              <span class="profile-level">Level <span id="profile-level">1</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rank-banner" id="rank-banner">
+          <div class="rank-medal" id="rank-medal">🌱</div>
+          <div class="rank-text">
+            <div class="rank-label">YOUR RANK</div>
+            <div class="rank-name" id="rank-name">Starter</div>
+          </div>
+          <div class="rank-progress">
+            <div class="rank-progress-bar"><div class="rank-progress-fill" id="tier-progress-fill"></div></div>
+            <div class="rank-progress-label" id="tier-progress-label">Next: Bronze in 19 levels</div>
+          </div>
+        </div>
+
+        <div class="action-grid">
+          <button class="action-card action-play" id="play-btn">
+            <span class="action-icon">▶️</span>
+            <span class="action-title">Play Level <span id="home-level-num">1</span></span>
+            <span class="action-sub" id="home-game-name">Star Catcher</span>
+          </button>
+          <button class="action-card action-daily" id="daily-btn">
+            <span class="action-icon">🌟</span>
+            <span class="action-title">Daily Challenge</span>
+            <span class="action-sub" id="daily-status">Numerdle awaits!</span>
+            <span class="action-badge" id="daily-badge" hidden>NEW</span>
+          </button>
+          <button class="action-card action-shop" id="shop-btn">
+            <span class="action-icon">🛍️</span>
+            <span class="action-title">Avatar Shop</span>
+            <span class="action-sub" id="shop-sub">Owned: 1</span>
+          </button>
+          <button class="action-card action-leaderboard" id="leaderboard-btn">
+            <span class="action-icon">🏆</span>
+            <span class="action-title">Leaderboard</span>
+            <span class="action-sub" id="leaderboard-sub">See your rank</span>
+          </button>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-pill"><span class="stat-label">Games</span><span class="stat-value" id="stat-games">0</span></div>
+          <div class="stat-pill"><span class="stat-label">Streak</span><span class="stat-value" id="stat-streak">0 🔥</span></div>
+          <div class="stat-pill"><span class="stat-label">Best Lvl</span><span class="stat-value" id="stat-best">1</span></div>
+          <div class="stat-pill"><span class="stat-label">Avatars</span><span class="stat-value" id="stat-avatars">1</span></div>
+        </div>
+
+        <button class="text small" id="reset-btn">Reset Progress</button>
+      </section>
+
+      <!-- LEVEL INTRO -->
+      <section id="level-intro-screen" class="screen">
+        <div class="rank-strip" id="intro-rank-strip">
+          <span class="rank-strip-medal" id="intro-rank-medal">🌱</span>
+          <span class="rank-strip-text">Rank: <strong id="intro-rank-name">Starter</strong></span>
+        </div>
+        <h2>Level <span id="intro-level-num">1</span></h2>
+        <h3 id="intro-game-name">Star Catcher</h3>
+        <div class="intro-icon" id="intro-icon">⭐</div>
+        <p id="intro-instructions" class="instructions"></p>
+        <div class="button-group">
+          <button class="primary" id="start-level-btn">Start!</button>
+          <button class="text" id="back-home-btn">Back</button>
+        </div>
+      </section>
+
+      <!-- GAME -->
+      <section id="game-screen" class="screen">
+        <div id="game-hud">
+          <span id="game-status"></span>
+          <button class="text small" id="quit-btn">Quit</button>
+        </div>
+        <div id="game-canvas"></div>
+      </section>
+
+      <!-- LEVEL COMPLETE -->
+      <section id="level-complete-screen" class="screen">
+        <div class="rank-strip" id="complete-rank-strip">
+          <span class="rank-strip-medal" id="complete-rank-medal">🌱</span>
+          <span class="rank-strip-text">Rank: <strong id="complete-rank-name">Starter</strong></span>
+        </div>
+        <h2>Great job!</h2>
+        <p class="earning">You earned <span id="diamonds-earned">0</span> <span class="diamond-icon">💎</span></p>
+        <p class="round-summary" id="round-summary"></p>
+        <div class="math-gate">
+          <p class="math-prompt">Solve to advance to Level <span id="next-level-num">2</span>:</p>
+          <div class="math-question" id="math-question">2 + 2 = ?</div>
+          <input type="text" inputmode="numeric" id="math-answer" autocomplete="off" placeholder="?">
+          <div class="numpad" id="numpad" aria-label="Number pad">
+            <button class="numpad-key" data-key="1" type="button">1</button>
+            <button class="numpad-key" data-key="2" type="button">2</button>
+            <button class="numpad-key" data-key="3" type="button">3</button>
+            <button class="numpad-key" data-key="4" type="button">4</button>
+            <button class="numpad-key" data-key="5" type="button">5</button>
+            <button class="numpad-key" data-key="6" type="button">6</button>
+            <button class="numpad-key" data-key="7" type="button">7</button>
+            <button class="numpad-key" data-key="8" type="button">8</button>
+            <button class="numpad-key" data-key="9" type="button">9</button>
+            <button class="numpad-key clear" data-key="clear" type="button" aria-label="Backspace">⌫</button>
+            <button class="numpad-key" data-key="0" type="button">0</button>
+            <button class="numpad-key enter" data-key="enter" type="button" aria-label="Submit">✓</button>
+          </div>
+          <div class="math-feedback" id="math-feedback"></div>
+          <button class="primary" id="submit-answer-btn">Check Answer</button>
+        </div>
+        <div class="button-group">
+          <button class="secondary" id="post-level-shop-btn">Visit Shop</button>
+        </div>
+      </section>
+
+      <!-- TIER UP -->
+      <section id="tierup-screen" class="screen">
+        <div class="tierup-banner" id="tierup-banner">
+          <span class="tierup-flash">★</span>
+          <h2 class="tierup-title">Tier Up!</h2>
+          <div class="tierup-medal" id="tierup-medal">🥉</div>
+          <div class="tierup-name" id="tierup-name">Bronze</div>
+          <p class="tierup-reward" id="tierup-reward">+250 💎 + new avatar</p>
+        </div>
+        <button class="primary" id="tierup-continue-btn">Continue</button>
+      </section>
+
+      <!-- DAILY: NUMERDLE -->
+      <section id="daily-screen" class="screen">
+        <h2>Daily Numerdle</h2>
+        <p class="instructions">Guess today's secret 4-digit number in 6 tries. Each digit gives a clue!</p>
+        <div class="daily-meta">
+          <span class="daily-pill">🔥 Streak: <strong id="daily-streak">0</strong></span>
+          <span class="daily-pill">📅 <strong id="daily-date">Today</strong></span>
+        </div>
+        <div class="numerdle-board" id="numerdle-board"></div>
+        <div class="numerdle-message" id="numerdle-message"></div>
+        <div class="numerdle-keyboard" id="numerdle-keyboard"></div>
+        <div class="button-group">
+          <button class="secondary" id="daily-back-btn">Back</button>
+        </div>
+      </section>
+
+      <!-- SHOP -->
+      <section id="shop-screen" class="screen">
+        <h2>Avatar Shop</h2>
+        <p class="shop-balance">Balance: <span class="diamond-icon">💎</span> <span id="shop-diamond-count">0</span></p>
+        <div class="shop-filters" id="shop-filters">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="owned">Owned</button>
+          <button class="filter-btn" data-filter="affordable">Affordable</button>
+          <button class="filter-btn" data-filter="tier">Tier Rewards</button>
+        </div>
+        <div class="avatar-grid" id="avatar-grid"></div>
+        <button class="primary" id="shop-back-btn">Back</button>
+      </section>
+
+      <!-- LEADERBOARD -->
+      <section id="leaderboard-screen" class="screen">
+        <h2>Leaderboard</h2>
+        <p class="instructions">Compete with other questers! Score = level × 100 + diamonds + bonuses.</p>
+        <div class="leaderboard-list" id="leaderboard-list"></div>
+        <div class="button-group">
+          <button class="primary" id="leaderboard-back-btn">Back</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <small>Progress saves to your browser.</small>
+    </footer>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/tiers.js"></script>
+  <script src="js/math.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/minigames.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/dailychallenge.js"></script>
+  <script src="js/leaderboard.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
