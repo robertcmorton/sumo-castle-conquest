@@ -48,6 +48,8 @@ button:disabled { opacity: .35; }
 .stars { font-size: 2.6em; letter-spacing: 0.1em; }
 .small { font-size: 0.8em; opacity: .75; }
 #rotate { z-index: 5; font-size: 1.6em; }
+#g { position: absolute; left: 0; top: 0; display: none; }
+#c { position: relative; }
 </style>
 </head>
 <body>
@@ -105,6 +107,7 @@ button:disabled { opacity: .35; }
   <div id="rotate" class="screen hidden">📱↻<br>Turn your device sideways!</div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 'use strict';
 // ---------- Layout (logical 1280x720) ----------
@@ -178,6 +181,7 @@ function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
   scale = canvas.width / W;
+  if (typeof size3D === 'function') size3D();
   const portrait = wh > ww * 1.05 && ww < 900;
   $('rotate').classList.toggle('hidden', !portrait);
   if (portrait && G && G.state === 'play') pauseGame();
@@ -719,7 +723,7 @@ function startBuild() {
     grid, time: BUILD_TIME, placed: 0, need: Math.min(30, 6 + Math.floor(G.L / 4)),
     sel: 'wood', home: { hp: homeHp, max: homeHp, flash: 0, cd: 1 },
     mons: [], shots: [], defense: false, waveT: 0, spawnT: 2, maxMach: Math.min(40, 2 + Math.floor(G.L / 2)),
-    tvOpen: true, lastCell: null, hover: null, tick: 0,
+    tvOpen: true, camView: null, lastCell: null, hover: null, tick: 0,
   };
   G.banner = { t: 2.4, title: '🏠 BUILD YOUR HUT!', sub: 'Put a roof on top and walls on both sides of your house. 3 minutes!' };
 }
@@ -930,10 +934,12 @@ function updParts(dt) {
   for (const f of G.floats) { f.life -= dt; f.y -= 32 * dt; }
   G.floats = G.floats.filter(f => f.life > 0);
 }
-function drawParts(oy) {
+function drawParts(oy, map) {
   oy = oy || 0;
   for (const p of G.parts) {
-    const a = clamp(p.life / p.max, 0, 1), x = p.x, y = p.y + oy;
+    const a = clamp(p.life / p.max, 0, 1);
+    let x = p.x, y = p.y + oy;
+    if (map) { const q = map(x, y); ctx.save(); ctx.translate(q.x, q.y); ctx.scale(q.s, q.s); x = 0; y = 0; }
     switch (p.k) {
       case 'chip': ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.fillRect(x - p.s / 2, y - p.s / 2, p.s, p.s); break;
       case 'confetti': ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.fillRect(x, y, 6, 4); break;
@@ -944,8 +950,13 @@ function drawParts(oy) {
       case 'wind': ctx.globalAlpha = a * 0.5; ctx.strokeStyle = '#e0f2fe'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - p.vx * 0.05, y - p.vy * 0.05); ctx.stroke(); break;
     }
     ctx.globalAlpha = 1;
+    if (map) ctx.restore();
   }
-  for (const f of G.floats) { ctx.globalAlpha = clamp(f.life * 1.5, 0, 1); text(f.str, f.x, f.y + oy, 20, f.color, 'center', 'rgba(0,0,0,.7)'); }
+  for (const f of G.floats) {
+    ctx.globalAlpha = clamp(f.life * 1.5, 0, 1);
+    if (map) { const q = map(f.x, f.y + oy); text(f.str, q.x, q.y, 20, f.color, 'center', 'rgba(0,0,0,.7)'); }
+    else text(f.str, f.x, f.y + oy, 20, f.color, 'center', 'rgba(0,0,0,.7)');
+  }
   ctx.globalAlpha = 1;
 }
 
@@ -955,7 +966,7 @@ function update(dt) {
   if (G.banner) { G.banner.t -= dt; if (G.banner.t <= 0) G.banner = null; }
   G.shake = Math.max(0, G.shake - dt * 30);
   if (G.phase === 'run') updRun(dt);
-  else if (G.phase === 'build') updBuild(dt);
+  else if (G.phase === 'build') { updBuild(dt); turnCamera(dt); }
   updParts(dt);
   // embers float up from the lava everywhere
   if (Math.random() < dt * 8) G.parts.push({ k: 'ember', x: rand(0, W), y: G.phase === 'run' ? G.run.lavaY : GY + LAVA_ROW * CELL, vx: rand(-15, 15), vy: rand(-90, -40), life: rand(1, 2.2), max: 2.2 });
@@ -972,7 +983,8 @@ function render() {
   if (G.phase === 'build') renderBuild(); else renderRun();
   ctx.restore();
   drawAtmosphere();
-  if (G.phase === 'build') { drawTV(); drawBuildHUD(); drawPalette(); } else { drawRunHUD(); drawTouchButtons(); }
+  if (T3.ok) { const want = use3D() ? 'block' : 'none'; if (T3.gl.style.display !== want) T3.gl.style.display = want; }
+  if (G.phase === 'build') { captureCamView(); drawTV(); drawCamView(); drawBuildHUD(); drawPalette(); if (use3D()) drawCamButtons(); } else { drawRunHUD(); drawTouchButtons(); }
   drawHint();
   drawBanner();
 }
@@ -1068,6 +1080,7 @@ function renderRun() {
 
 // ---------- Build drawing ----------
 function renderBuild() {
+  if (use3D()) return renderBuild3D();
   const B = G.b, k = REAL;
   drawSky(0);
   // dark dug-out ground behind the cubes
@@ -1150,8 +1163,9 @@ function drawTV() {
   if (cams.length) {
     const i = Math.floor(G.t / 3) % cams.length, cam = cams[i];
     const vw = 300, vh = 188;
-    let cx = clamp(cam.c * CELL + 16 - vw / 2, 0, W - vw), cy = clamp(GY + cam.r * CELL + 16 - vh / 2, GY, GY + LAVA_ROW * CELL + 30 - vh);
-    try { ctx.drawImage(canvas, cx * scale, cy * scale, vw * scale, vh * scale, sx, sy, sw, sh); } catch (e) {}
+    const cc = cellOnScreen(cam.c, cam.r);
+    let cx = clamp(cc.x - vw / 2, 0, W - vw), cy = clamp(cc.y - vh / 2, GY, GY + LAVA_ROW * CELL + 30 - vh);
+    try { if (use3D()) ctx.drawImage(T3.gl, cx * scale, cy * scale, vw * scale, vh * scale, sx, sy, sw, sh); ctx.drawImage(canvas, cx * scale, cy * scale, vw * scale, vh * scale, sx, sy, sw, sh); } catch (e) {}
     ctx.fillStyle = 'rgba(30,255,120,.08)'; ctx.fillRect(sx, sy, sw, sh);
     ctx.fillStyle = 'rgba(0,0,0,.18)'; for (let y = sy; y < sy + sh; y += 3) ctx.fillRect(sx, y, sw, 1);
     text('📷 CAM ' + (i + 1) + ' of ' + cams.length, sx + 8, sy + 12, 12, '#fff', 'left', 'rgba(0,0,0,.6)');
@@ -1161,6 +1175,53 @@ function drawTV() {
     text('No cameras yet! Build a 📷', sx + sw / 2, sy + sh / 2, 15, '#fff', 'center', '#000');
   }
   text('📺 TV  –  tap to hide', tv.x + tv.w / 2, tv.y + tv.h + 10, 11, 'rgba(255,255,255,.7)');
+}
+
+// Tap a camera to look close up at what's near it
+function camViewRect() {
+  const v = G.b.camView, w = 560, h = 352, cc = cellOnScreen(v.c, v.r);
+  const camX = cc.x, camY = cc.y;
+  return { x: camX < W / 2 ? W - w - 14 : 14, y: camY < (TOP + SHOP_Y) / 2 ? SHOP_Y - h - 30 : TOP + 12, w, h };
+}
+const camShot = document.createElement('canvas');
+// where a cell's middle is on the screen (it moves when the 3-D camera turns)
+function cellOnScreen(c, r) { return use3D() ? toScreen(c * CELL + 16, GY + r * CELL + 16, 0) : { x: c * CELL + 16, y: GY + r * CELL + 16 }; }
+function camSrc() {
+  const v = G.b.camView, R = camViewRect(), vw = R.w / 2, vh = R.h / 2, cc = cellOnScreen(v.c, v.r);
+  return { x: clamp(cc.x - vw / 2, 0, W - vw), y: clamp(cc.y - vh / 2, GY, GY + LAVA_ROW * CELL + 30 - vh), w: vw, h: vh };
+}
+// grab the camera's picture before the TV and buttons are drawn on top
+function captureCamView() {
+  const B = G.b, v = B.camView;
+  if (!v) return;
+  const b = B.grid[v.r] && B.grid[v.r][v.c];
+  if (!b || b.t !== 'camera') { B.camView = null; return; }
+  const S = camSrc(), w = Math.round(S.w * scale), h = Math.round(S.h * scale);
+  if (camShot.width !== w || camShot.height !== h) { camShot.width = w; camShot.height = h; }
+  const sc = camShot.getContext('2d'); sc.clearRect(0, 0, w, h);
+  try { if (use3D()) sc.drawImage(T3.gl, S.x * scale, S.y * scale, w, h, 0, 0, w, h); sc.drawImage(canvas, S.x * scale, S.y * scale, w, h, 0, 0, w, h); } catch (e) {}
+}
+function drawCamView() {
+  const B = G.b, v = B.camView;
+  if (!v) return;
+  const cams = [];
+  for (let r = 0; r < LAVA_ROW; r++) for (let c = 0; c < COLS; c++) { const q = B.grid[r][c]; if (q && q.t === 'camera') cams.push(r * COLS + c); }
+  const num = cams.indexOf(v.r * COLS + v.c) + 1;
+  const R = camViewRect(), S = camSrc(), cx = S.x, cy = S.y, vw = S.w, vh = S.h, shot = camShot;
+  // a box on the map showing where the camera is looking
+  ctx.save(); ctx.strokeStyle = 'rgba(239,68,68,.9)'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.strokeRect(cx, cy, vw, vh); ctx.restore();
+  rr(R.x - 8, R.y - 8, R.w + 16, R.h + 40, 14); ctx.fillStyle = '#0f172a'; ctx.fill();
+  ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(shot, R.x, R.y, R.w, R.h); ctx.restore();
+  ctx.fillStyle = 'rgba(30,255,120,.06)'; ctx.fillRect(R.x, R.y, R.w, R.h);
+  ctx.fillStyle = 'rgba(0,0,0,.14)'; for (let y = R.y; y < R.y + R.h; y += 4) ctx.fillRect(R.x, y, R.w, 1);
+  // corner marks like a real camera screen
+  ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 3;
+  for (const [ax, ay, dx, dy] of [[R.x + 14, R.y + 14, 1, 1], [R.x + R.w - 14, R.y + 14, -1, 1], [R.x + 14, R.y + R.h - 14, 1, -1], [R.x + R.w - 14, R.y + R.h - 14, -1, -1]]) {
+    ctx.beginPath(); ctx.moveTo(ax, ay + dy * 24); ctx.lineTo(ax, ay); ctx.lineTo(ax + dx * 24, ay); ctx.stroke();
+  }
+  text('📷 CAMERA ' + num + ' of ' + cams.length, R.x + 26, R.y + 30, 18, '#fff', 'left', 'rgba(0,0,0,.7)');
+  if (Math.floor(G.t * 2) % 2) { circle(R.x + R.w - 70, R.y + 30, 7, '#ef4444'); text('REC', R.x + R.w - 36, R.y + 30, 15, '#fff', 'center', 'rgba(0,0,0,.7)'); }
+  text('Tap here to close  •  tap another 📷 to look there', R.x + R.w / 2, R.y + R.h + 16, 14, 'rgba(255,255,255,.8)');
 }
 
 // Natural colours and a camera-lens vignette that grow with each level
@@ -1174,9 +1235,269 @@ function drawAtmosphere() {
     heat.addColorStop(0, 'rgba(60,20,80,' + (0.25 * k) + ')'); heat.addColorStop(1, 'rgba(255,120,40,' + (0.35 * k) + ')');
     G.atmo = { k, vig, heat };
   }
+  if (use3D()) { ctx.fillStyle = G.atmo.vig; ctx.fillRect(0, TOP, W, H - TOP); return; }
   ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = 'rgba(128,128,128,' + (0.2 * k) + ')'; ctx.fillRect(0, TOP, W, H - TOP);
   ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = G.atmo.heat; ctx.fillRect(0, TOP, W, H - TOP);
   ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = G.atmo.vig; ctx.fillRect(0, TOP, W, H - TOP);
+}
+
+// ============================================================
+// 3-D building: real cubes, a 3-D house and lava, and a camera you can turn.
+// The game itself still works on the same grid; this just draws it in 3-D.
+// Monsters, shots and sparks are drawn on top at their 3-D spot.
+// ============================================================
+const VIEW = { yaw: 0.42, pitch: 0.26, hold: { x: 0, y: 0 } };
+const VIEW_HOME = { yaw: 0.42, pitch: 0.26 };
+const T3 = { ok: false };
+const use3D = () => T3.ok && G && G.phase === 'build';
+function init3D() {
+  if (!window.THREE) return;
+  try {
+    const gl = document.createElement('canvas'); gl.id = 'g';
+    wrap.insertBefore(gl, canvas);
+    const R = new THREE.WebGLRenderer({ canvas: gl, antialias: true, preserveDrawingBuffer: true });
+    R.setPixelRatio(1);
+    const scene = new THREE.Scene();
+    const cam = new THREE.PerspectiveCamera(40, W / H, 0.5, 400);
+    // sky
+    const sky = document.createElement('canvas'); sky.width = 4; sky.height = 256;
+    const sg = sky.getContext('2d'), grd = sg.createLinearGradient(0, 0, 0, 256);
+    grd.addColorStop(0, '#1e0b2e'); grd.addColorStop(0.55, '#5b1a1a'); grd.addColorStop(1, '#c2410c');
+    sg.fillStyle = grd; sg.fillRect(0, 0, 4, 256);
+    scene.background = new THREE.CanvasTexture(sky);
+    scene.fog = new THREE.Fog(0x3a1010, 60, 160);
+    // lights: warm sun from the front-left, orange glow from the lava below
+    scene.add(new THREE.HemisphereLight(0xffe4c4, 0x3b0f0f, 0.75));
+    const sun = new THREE.DirectionalLight(0xfff1dc, 0.85); sun.position.set(-18, 30, 26); scene.add(sun);
+    const glow = new THREE.PointLight(0xff6a1a, 1.6, 26, 1.6); glow.position.set(20, -15.2, 3); scene.add(glow);
+    const glow2 = new THREE.PointLight(0xff6a1a, 1.0, 22, 1.6); glow2.position.set(4, -15.5, 3); scene.add(glow2);
+    const glow3 = new THREE.PointLight(0xff6a1a, 1.0, 22, 1.6); glow3.position.set(36, -15.5, 3); scene.add(glow3);
+    // the rock behind the underground part (you see it when you dig)
+    const rockMap = new THREE.CanvasTexture(rockTex()); rockMap.wrapS = rockMap.wrapT = THREE.RepeatWrapping; rockMap.repeat.set(10, 2);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(COLS, LAVA_ROW - SURF + 0.6, 6), new THREE.MeshLambertMaterial({ map: rockMap, color: 0x6b4a3a }));
+    back.position.set(COLS / 2, -(SURF + LAVA_ROW) / 2 - 0.3, -3.5); scene.add(back);
+    // ground on both sides, so the base sits in a real landscape
+    const sideMat = new THREE.MeshLambertMaterial({ map: rockMap, color: 0x8a5a3c });
+    for (const sx of [-1, 1]) {
+      const side = new THREE.Mesh(new THREE.BoxGeometry(40, LAVA_ROW - SURF + 0.6, 14), sideMat);
+      side.position.set(sx < 0 ? -20 : COLS + 20, -(SURF + LAVA_ROW) / 2 - 0.3, -2.5); scene.add(side);
+    }
+    const grass = new THREE.Mesh(new THREE.BoxGeometry(COLS + 80, 0.25, 14), new THREE.MeshLambertMaterial({ color: 0x4d7c0f }));
+    grass.position.set(COLS / 2, -SURF + 0.12, -9.5); scene.add(grass);
+    // volcanoes far away
+    for (const [x, z, h, r] of [[-30, -70, 34, 22], [8, -95, 46, 28], [55, -80, 38, 24], [85, -60, 26, 18]]) {
+      const v = new THREE.Mesh(new THREE.ConeGeometry(r, h, 24, 1, true), new THREE.MeshLambertMaterial({ color: 0x2a0f0f }));
+      v.position.set(x, -SURF + h / 2 - 2, z); scene.add(v);
+      const top = new THREE.Mesh(new THREE.SphereGeometry(2.4, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff7a1a }));
+      top.position.set(x, -SURF + h - 2.2, z); scene.add(top);
+    }
+    // lava
+    const lc = document.createElement('canvas'); lc.width = lc.height = 128;
+    const lg = lc.getContext('2d'); lg.fillStyle = '#d9480f'; lg.fillRect(0, 0, 128, 128);
+    const rnd = mulberry32(7);
+    for (let i = 0; i < 60; i++) { lg.fillStyle = ['#f97316', '#fbbf24', '#9a3412', '#fde047'][i % 4]; lg.globalAlpha = 0.5; lg.beginPath(); lg.arc(rnd() * 128, rnd() * 128, 4 + rnd() * 14, 0, 7); lg.fill(); }
+    const lavaMap = new THREE.CanvasTexture(lc); lavaMap.wrapS = lavaMap.wrapT = THREE.RepeatWrapping; lavaMap.repeat.set(30, 12);
+    const lava = new THREE.Mesh(new THREE.PlaneGeometry(200, 80), new THREE.MeshBasicMaterial({ map: lavaMap }));
+    lava.rotation.x = -Math.PI / 2; lava.position.set(COLS / 2, -LAVA_ROW - 0.1, -10); scene.add(lava);
+    // one group of cubes for each kind of block
+    const box = new THREE.BoxGeometry(0.98, 0.98, 0.98);
+    const meshes = {};
+    const MAXN = COLS * LAVA_ROW;
+    const dummy = new THREE.Object3D(), col = new THREE.Color();
+    for (const t in BLOCKS) {
+      const m = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0xffffff }), MAXN);
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      m.setColorAt(0, col.set(0xffffff));
+      m.count = 0; m.frustumCulled = false; scene.add(m); meshes[t] = m;
+    }
+    // machine barrels that turn to aim
+    const barrelGeo = new THREE.CylinderGeometry(0.12, 0.14, 0.62, 10); barrelGeo.rotateZ(-Math.PI / 2); barrelGeo.translate(0.3, 0, 0);
+    const barrelMats = { bomb: new THREE.MeshLambertMaterial({ color: 0x111827 }), fire: new THREE.MeshLambertMaterial({ color: 0x991b1b }), dart: new THREE.MeshLambertMaterial({ color: 0x166534 }) };
+    const barrels = [];
+    // camera lights that blink
+    const blinkMat = new THREE.MeshBasicMaterial({ color: 0xef4444 }), blinks = [];
+    // the house
+    const house = new THREE.Group();
+    const wallMat = new THREE.MeshLambertMaterial({ color: 0xfde68a });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.35, 0.96), wallMat); body.position.set(0, -0.32, 0); house.add(body);
+    const roofShape = new THREE.Shape(); roofShape.moveTo(-1.08, 0); roofShape.lineTo(0, 0.68); roofShape.lineTo(1.08, 0); roofShape.closePath();
+    const roofGeo = new THREE.ExtrudeGeometry(roofShape, { depth: 1.12, bevelEnabled: false }); roofGeo.translate(0, 0, -0.56);
+    const roof = new THREE.Mesh(roofGeo, new THREE.MeshLambertMaterial({ color: 0xb91c1c })); roof.position.set(0, 0.33, 0); house.add(roof);
+    const chim = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.42, 0.22), new THREE.MeshLambertMaterial({ color: 0x57534e })); chim.position.set(0.5, 0.62, -0.15); house.add(chim);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.76, 0.06), new THREE.MeshLambertMaterial({ color: 0x7c2d12 })); door.position.set(-0.45, -0.62, 0.5); house.add(door);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfde047 })); knob.position.set(-0.29, -0.62, 0.54); house.add(knob);
+    const win = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.42, 0.06), new THREE.MeshLambertMaterial({ color: 0x7dd3fc, emissive: 0x1e3a5f })); win.position.set(0.42, -0.2, 0.5); house.add(win);
+    const sill = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.42, 0.08), new THREE.MeshLambertMaterial({ color: 0x78350f })); sill.position.set(0.42, -0.2, 0.52); house.add(sill);
+    house.position.set(HOME.c + 1, -(HOME.r + 1), 0); scene.add(house);
+    // where the hut should go (blinks until it's done)
+    const hutBox = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(4, 3, 1.2)), new THREE.LineBasicMaterial({ color: 0xfde047 }));
+    hutBox.position.set(HOME.c + 1, -(HOME.r - 1 + 1.5), 0); scene.add(hutBox);
+    // where your next cube will go
+    const ghost = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, depthWrite: false }));
+    scene.add(ghost);
+    const digBox = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.06, 1.06, 1.06)), new THREE.LineBasicMaterial({ color: 0xfca5a5 }));
+    scene.add(digBox);
+    Object.assign(T3, { ok: true, gl, R, scene, cam, meshes, dummy, col, barrels, barrelGeo, barrelMats, blinks, blinkMat, house, wallMat, hutBox, ghost, digBox, lavaMap, tier: -1, ray: new THREE.Raycaster(), v: new THREE.Vector3(), v2: new THREE.Vector2() });
+  } catch (e) { T3.ok = false; if (T3.gl) T3.gl.remove(); }
+}
+function size3D() { if (T3.ok) T3.R.setSize(canvas.width, canvas.height, false); }
+// make the cubes look like the flat ones, more real each level
+function texture3D() {
+  if (T3.tier === RTIER) return;
+  T3.tier = RTIER;
+  for (const t in T3.meshes) {
+    const old = T3.meshes[t].material, map = new THREE.CanvasTexture(blockSprite(t));
+    map.anisotropy = 4;
+    const opts = { map, color: 0xffffff };
+    if (t === 'glass') Object.assign(opts, { transparent: true, opacity: 0.55 });
+    if (t === 'gold') Object.assign(opts, { emissive: 0x3a2a00 });
+    if (t === 'obsidian') Object.assign(opts, { emissive: 0x1a0a2a });
+    T3.meshes[t].material = t === 'gold' || t === 'glass' || t === 'obsidian' ? new THREE.MeshPhongMaterial(Object.assign(opts, { shininess: 90, specular: 0x666666 })) : new THREE.MeshLambertMaterial(opts);
+    if (old.map) old.map.dispose(); old.dispose();
+  }
+  T3.wallMat.color.set(REAL < 0.15 ? 0xfde68a : 0xe9d5a3);
+}
+function placeCamera(D, sh) {
+  const c = T3.cam, tx = COLS / 2, ty = -LAVA_ROW / 2, tz = 0;
+  c.position.set(tx + D * Math.sin(VIEW.yaw) * Math.cos(VIEW.pitch) + rand(-sh, sh), ty + D * Math.sin(VIEW.pitch) + rand(-sh, sh), tz + D * Math.cos(VIEW.yaw) * Math.cos(VIEW.pitch));
+  c.lookAt(tx, ty, tz);
+  c.updateMatrixWorld();
+}
+// move the camera back until the whole base fits between the top bar and the cube buttons, then centre it
+function fitCamera() {
+  const key = VIEW.yaw.toFixed(3) + ',' + VIEW.pitch.toFixed(3) + ',' + W;
+  if (T3.fitKey === key) return;
+  T3.fitKey = key;
+  const c = T3.cam, v = T3.v, corners = [];
+  for (const x of [0, COLS]) for (const y of [0, -LAVA_ROW]) for (const z of [0.5, -0.5]) corners.push([x, y, z]);
+  c.clearViewOffset();
+  const box = () => {
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const [x, y, z] of corners) { v.set(x, y, z).project(c); const sx = (v.x + 1) / 2 * W, sy = (1 - v.y) / 2 * H; x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy); }
+    return { x0, x1, y0, y1 };
+  };
+  const roomW = W - 30, roomH = SHOP_Y - TOP - 26;
+  let lo = 15, hi = 120;
+  for (let i = 0; i < 18; i++) { const D = (lo + hi) / 2; placeCamera(D, 0); const b = box(); if (b.x1 - b.x0 <= roomW && b.y1 - b.y0 <= roomH) hi = D; else lo = D; }
+  T3.D = hi; placeCamera(hi, 0);
+  const b = box();
+  T3.off = { x: (b.x0 + b.x1) / 2 - W / 2, y: (b.y0 + b.y1) / 2 - (TOP + SHOP_Y) / 2 };
+}
+function updateCamera3D() {
+  fitCamera();
+  placeCamera(T3.D, G.shake > 0 ? G.shake * 0.02 : 0);
+  T3.cam.setViewOffset(W, H, T3.off.x, T3.off.y, W, H);
+  T3.cam.updateProjectionMatrix();
+}
+function turnCamera(dt) {
+  const h = VIEW.hold;
+  let x = h.x, y = h.y;
+  if (keys['ArrowLeft'] || keys['q']) x = -1; if (keys['ArrowRight'] || keys['e']) x = 1;
+  if (keys['ArrowUp']) y = 1; if (keys['ArrowDown']) y = -1;
+  VIEW.yaw = clamp(VIEW.yaw + x * dt * 1.3, -1.15, 1.15);
+  VIEW.pitch = clamp(VIEW.pitch + y * dt * 0.9, -0.12, 0.85);
+}
+function render3D() {
+  const B = G.b, M = T3.meshes, d = T3.dummy, col = T3.col;
+  texture3D();
+  updateCamera3D();
+  for (const t in M) M[t].count = 0;
+  let nb = 0, nl = 0;
+  for (let r = 0; r < LAVA_ROW; r++) for (let c = 0; c < COLS; c++) {
+    const b = B.grid[r][c];
+    if (!b || b.t === 'home') continue;
+    const m = M[b.t]; if (!m) continue;
+    d.position.set(c + 0.5, -(r + 0.5), 0); d.rotation.set(0, 0, 0); d.scale.set(1, 1, 1); d.updateMatrix();
+    m.setMatrixAt(m.count, d.matrix);
+    // cracked cubes get darker, hit cubes flash white
+    const fr = b.max ? clamp(b.hp / b.max, 0, 1) : 1;
+    if (b.flash > 0) col.setRGB(2, 2, 2); else col.setScalar(0.55 + 0.45 * fr);
+    m.setColorAt(m.count, col);
+    m.count++;
+    const bt = BLOCKS[b.t];
+    if (bt.machine) {
+      let br = T3.barrels[nb];
+      if (!br) { br = new THREE.Mesh(T3.barrelGeo, T3.barrelMats.bomb); T3.scene.add(br); T3.barrels.push(br); }
+      br.material = T3.barrelMats[bt.machine] || T3.barrelMats.bomb;
+      br.position.set(c + 0.5, -(r + 0.5), 0.52); br.rotation.set(0, 0, -(b.ang || -Math.PI / 2)); br.visible = true; nb++;
+    }
+    if (b.t === 'camera') {
+      let bl = T3.blinks[nl];
+      if (!bl) { bl = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), T3.blinkMat); T3.scene.add(bl); T3.blinks.push(bl); }
+      bl.position.set(c + 0.8, -(r + 0.3), 0.52); bl.visible = Math.floor(G.t * 2) % 2 === 1; nl++;
+    }
+  }
+  for (const t in M) { M[t].instanceMatrix.needsUpdate = true; if (M[t].instanceColor) M[t].instanceColor.needsUpdate = true; }
+  for (let i = nb; i < T3.barrels.length; i++) T3.barrels[i].visible = false;
+  for (let i = nl; i < T3.blinks.length; i++) T3.blinks[i].visible = false;
+  // house flashes red when hit
+  T3.wallMat.emissive.setRGB(B.home.flash > 0 ? 0.5 : 0, 0, 0);
+  T3.hutBox.visible = !B.defense && !hutStatus().done && Math.floor(G.t * 2) % 2 === 0;
+  // the ghost cube shows where your cube will go
+  const hv = B.hover;
+  T3.ghost.visible = T3.digBox.visible = false;
+  if (hv && hv.r >= 0 && hv.r < LAVA_ROW && hv.c >= 0 && hv.c < COLS && !B.dragging) {
+    const cur = cellAt(hv.c, hv.r);
+    if (B.sel === 'dig') { if (cur && cur.t !== 'home') { T3.digBox.visible = true; T3.digBox.position.set(hv.c + 0.5, -(hv.r + 0.5), 0); } }
+    else if (!cur) { T3.ghost.visible = true; T3.ghost.position.set(hv.c + 0.5, -(hv.r + 0.5), 0); T3.ghost.material.map = M[B.sel].material.map; T3.ghost.material.needsUpdate = true; }
+  }
+  T3.lavaMap.offset.x = G.t * 0.01; T3.lavaMap.offset.y = Math.sin(G.t * 0.3) * 0.02;
+  T3.R.render(T3.scene, T3.cam);
+}
+// where a spot in the game (x, y in pixels) shows up on screen, and how big things are there
+function toScreen(x, y, z) {
+  const v = T3.v.set(x / CELL, -(y - GY) / CELL, z === undefined ? 0.5 : z);
+  const depth = -v.clone().applyMatrix4(T3.cam.matrixWorldInverse).z;
+  v.project(T3.cam);
+  const ppu = (H / 2) / (Math.tan(T3.cam.fov * Math.PI / 360) * Math.max(1, depth));
+  return { x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H, s: ppu / CELL };
+}
+// which grid cell is under your finger (filled: the first cube the finger hits)
+function screenToCell(p, filled) {
+  if (!use3D()) return pxToCell(p.x, p.y);
+  T3.v2.set(p.x / W * 2 - 1, -(p.y / H * 2 - 1));
+  T3.ray.setFromCamera(T3.v2, T3.cam);
+  const o = T3.ray.ray.origin, dir = T3.ray.ray.direction;
+  if (Math.abs(dir.z) < 1e-4) return { c: -1, r: -1 };
+  const at = z => { const k = (z - o.z) / dir.z; return { c: Math.floor(o.x + dir.x * k), r: Math.floor(-(o.y + dir.y * k)) }; };
+  const front = at(0.5);
+  if (!filled) return front;
+  for (let i = 0; i <= 12; i++) { const q = at(0.5 - i / 12); const b = cellAt(q.c, q.r); if (b && b.t !== 'home') return q; }
+  return front;
+}
+// camera turning buttons
+function camBtnRects() {
+  const y = SHOP_Y - 54, s = 44, x0 = W - 5 * (s + 6) - 10;
+  return [['left', '◀', -1, 0], ['up', '▲', 0, 1], ['reset', '🎥', 0, 0], ['down', '▼', 0, -1], ['right', '▶', 1, 0]]
+    .map(([id, ic, dx, dy], i) => ({ id, ic, dx, dy, x: x0 + i * (s + 6), y, w: s, h: s }));
+}
+function drawCamButtons() {
+  for (const b of camBtnRects()) {
+    const on = (b.dx && VIEW.hold.x === b.dx) || (b.dy && VIEW.hold.y === b.dy);
+    rr(b.x, b.y, b.w, b.h, 12); ctx.fillStyle = on ? 'rgba(234,88,12,.9)' : 'rgba(28,10,5,.7)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.stroke();
+    if (b.id === 'reset') drawEmo(b.ic, b.x + b.w / 2, b.y + b.h / 2, 22); else text(b.ic, b.x + b.w / 2, b.y + b.h / 2 + 1, 20, '#fff');
+  }
+  text('Turn the camera', camBtnRects()[2].x + 22, SHOP_Y - 64, 12, 'rgba(255,255,255,.7)');
+}
+function renderBuild3D() {
+  const B = G.b;
+  render3D();
+  ctx.clearRect(-60, -60, W + 120, H + 120);
+  // you, standing by your house
+  const hr = homeRect();
+  let q = toScreen(hr.x - 18, hr.y + hr.h);
+  ctx.save(); ctx.translate(q.x, q.y); ctx.scale(q.s, q.s); drawHero(0, 0, { face: 1, walk: 0, squash: Math.max(0, Math.sin(G.t * 3)) * 0.1 }); ctx.restore();
+  // house health
+  if (B.defense) { q = toScreen(hr.x + hr.w / 2, hr.y - 22); bar(q.x - 40, q.y, 80, 7, B.home.hp / B.home.max, hpColor(B.home.hp / B.home.max)); }
+  // monsters and shots
+  for (const m of B.mons) { q = toScreen(m.x, m.y); ctx.save(); ctx.translate(q.x, q.y); ctx.scale(q.s, q.s); drawMonster(m, 0, 0); ctx.restore(); }
+  for (const s of B.shots) {
+    q = toScreen(s.x, s.y);
+    if (s.k === 'bomb') { circle(q.x, q.y, 6 * q.s, '#111'); circle(q.x + 3 * q.s, q.y - 6 * q.s, (2 + Math.random() * 1.5) * q.s, '#fbbf24'); }
+    else { const a = Math.atan2(s.y1 - s.y0, s.x1 - s.x0), t = toScreen(s.x - Math.cos(a) * 10, s.y - Math.sin(a) * 10); ctx.strokeStyle = '#84cc16'; ctx.lineWidth = 2.5 * q.s; ctx.beginPath(); ctx.moveTo(t.x, t.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+  }
+  drawParts(0, toScreen);
 }
 
 // ---------- HUD ----------
@@ -1283,6 +1604,7 @@ function drawHint() {
     if (!st.roof) msg = '👆 Pick a cube at the bottom, then tap above your house to make a ROOF';
     else if (!st.left || !st.right) msg = '🧱 Now build WALLS on both sides of your house';
     else if (!st.cubes) msg = '🧊 Add a few more cubes – make your base bigger!';
+    else if (G.L === 2 && !G.b.camView && G.b.grid.some(row => row.some(q => q && q.t === 'camera'))) msg = '📷 Tap a camera to look close up!';
     else msg = '✅ Hut done! Tap the green button at the top';
   }
   if (!msg) return;
@@ -1327,19 +1649,31 @@ canvas.addEventListener('pointerdown', e => {
   // tap the TV to hide or show it
   let hasTV = false; for (const row of B.grid) for (const b of row) if (b && b.t === 'tv') hasTV = true;
   if (hasTV && inR(p, tvRect())) { B.tvOpen = !B.tvOpen; return; }
+  // tap the camera screen to close it
+  if (B.camView && inR(p, camViewRect())) { B.camView = null; sfx('tick'); return; }
+  // buttons that turn the 3-D camera (hold them down)
+  if (use3D()) for (const cb of camBtnRects()) if (inR(p, cb)) {
+    if (cb.id === 'reset') { VIEW.yaw = VIEW_HOME.yaw; VIEW.pitch = VIEW_HOME.pitch; } else { VIEW.hold.x = cb.dx; VIEW.hold.y = cb.dy; }
+    sfx('tick'); return;
+  }
+  // tap a camera to look near it (the dig tool still digs it up)
+  const tc = screenToCell(p, true), tb = B.grid[tc.r] && B.grid[tc.r][tc.c];
+  if (tb && tb.t === 'camera' && B.sel !== 'dig') {
+    B.camView = (B.camView && B.camView.c === tc.c && B.camView.r === tc.r) ? null : { c: tc.c, r: tc.r }; sfx('tick'); return;
+  }
   pointerDown = true; B.dragging = true;
-  const c = pxToCell(p.x, p.y); B.lastCell = c.c + ',' + c.r; applyTool(c.c, c.r);
+  const c = screenToCell(p, B.sel === 'dig'); B.lastCell = c.c + ',' + c.r; applyTool(c.c, c.r);
 });
 canvas.addEventListener('pointermove', e => {
   if (!G || G.state !== 'play') return;
   const p = toLogical(e);
   if (G.phase === 'run') { if (activeTouch.has(e.pointerId)) { activeTouch.set(e.pointerId, p); updateTouchButtons(); } return; }
   if (G.phase !== 'build') return;
-  const B = G.b, c = pxToCell(p.x, p.y);
+  const B = G.b, c = screenToCell(p, B.sel === 'dig');
   B.hover = p.y > TOP && p.y < SHOP_Y ? c : null;
   if (pointerDown && B.dragging && p.y > TOP && p.y < SHOP_Y) { const key = c.c + ',' + c.r; if (key !== B.lastCell) { B.lastCell = key; applyTool(c.c, c.r); } }
 });
-const endPointer = e => { pointerDown = false; if (G && G.b) G.b.dragging = false; activeTouch.delete(e.pointerId); updateTouchButtons(); };
+const endPointer = e => { VIEW.hold.x = VIEW.hold.y = 0; pointerDown = false; if (G && G.b) G.b.dragging = false; activeTouch.delete(e.pointerId); updateTouchButtons(); };
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('pointerleave', () => { if (G && G.b) G.b.hover = null; });
@@ -1430,6 +1764,7 @@ function loop(now) {
   render();
   requestAnimationFrame(loop);
 }
+init3D();
 resize();
 updateTitle();
 show('title');
