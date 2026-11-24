@@ -260,6 +260,8 @@ function sfx(type) {
       s.connect(f); f.connect(g); g.connect(AC.destination); s.start(t); s.stop(t + dur);
     };
     switch (type) {
+      case 'zap': tone(1400, 0.12, 'square', 0.06, 300); noise(0.06, 0.08, 3000); break;
+      case 'tele': tone(300, 0.25, 'sine', 0.12, 1600); tone(900, 0.2, 'triangle', 0.08, 2400, 0.08); break;
       case 'jump': tone(420, 0.12, 'square', 0.05, 760); break;
       case 'boing': tone(220, 0.35, 'sine', 0.14, 880); tone(330, 0.3, 'triangle', 0.05, 990); break;
       case 'splash': noise(0.35, 0.22, 1800); tone(300, 0.15, 'sine', 0.05, 150); break;
@@ -558,6 +560,7 @@ function initRun() {
     C, lavaY: Math.max(...C.plats.map(pl => pl.y)) + 60, // just below the lowest platform or pool lavaSpd: G.L >= 4 ? 10 + Math.min(34, G.L * 0.08) : 0, lavaDelay: 4,
     p: { x: start.x, y: start.y, vx: 0, vy: 0, onGround: true, coyote: 0, jumpBuf: 0, face: 1, walk: 0, squash: 0, inWater: false, inv: 0, plat: start },
     hearts: 3, camY: start.y - 470, done: false, doneT: 0, dying: 0,
+    tele: false, teleCD: 0, shots: [], gunCD: 0,
   };
   G.run.camY = clamp(G.run.camY, 0, C.height - (H - TOP));
 }
@@ -565,7 +568,7 @@ const RUN = { spd: 280, accG: 2600, accA: 1500, grav: 1500, jump: 640, tramp: 10
 function runInput() {
   const left = keys.ArrowLeft || keys.a || touchBtn.left, right = keys.ArrowRight || keys.d || touchBtn.right;
   const jump = keys.ArrowUp || keys.w || keys[' '] || touchBtn.jump;
-  return { dir: (right ? 1 : 0) - (left ? 1 : 0), jump };
+  return { dir: (right ? 1 : 0) - (left ? 1 : 0), jump, fire: keys.f || keys.x || touchBtn.fire };
 }
 let jumpWasDown = false;
 function updRun(dt) {
@@ -593,6 +596,13 @@ function updRun(dt) {
   const acc = p.onGround ? RUN.accG : RUN.accA;
   if (p.vx < want) p.vx = Math.min(want, p.vx + acc * dt); else if (p.vx > want) p.vx = Math.max(want, p.vx - acc * dt);
   if (inp.dir) p.face = inp.dir;
+  // the gun: hold FIRE to shoot
+  R.gunCD -= dt; R.teleCD -= dt;
+  if (inp.fire && R.gunCD <= 0) {
+    R.gunCD = 0.28; sfx('zap');
+    R.shots.push({ x: p.x + p.face * 26, y: p.y - 17, vx: p.face * 950, life: 0.9 });
+  }
+  updGun(dt);
   // fans
   for (const f of C.fans) {
     if (p.x > f.x && p.x < f.x + f.w && p.y > f.y0 && p.y - 30 < f.y1) {
@@ -668,6 +678,39 @@ function updRun(dt) {
   // camera follows you up
   const target = clamp(p.y - 430, 0, C.height - (H - TOP));
   R.camY += (target - R.camY) * Math.min(1, dt * 6);
+}
+// 🔫 Leo's gun: zaps lava monsters
+function updGun(dt) {
+  const R = G.run;
+  for (const b of R.shots) {
+    b.life -= dt; b.x += b.vx * dt;
+    if (b.x < -20 || b.x > W + 20) b.life = 0;
+    for (const m of R.C.mons) {
+      if (m.dead || b.life <= 0) continue;
+      if (Math.abs(b.x - m.x) < 24 && b.y > m.y - 36 && b.y < m.y + 4) {
+        m.dead = true; b.life = 0; sfx('stomp'); burst(m.x, m.y - 12, '#f97316', 16, 200); floatText('ZAP!', m.x, m.y - 42, '#fde047');
+      }
+    }
+  }
+  R.shots = R.shots.filter(b => b.life > 0);
+}
+// ✨ teleport: press the button, then tap where you want to go
+function teleTo(sx, sy) {
+  const R = G.run, p = R.p, C = R.C;
+  let x = clamp(sx, 14, W - 14), y = sy - TOP + R.camY;
+  // tapped inside a platform? stand on top of it
+  for (const pl of C.plats) if (!pl.gone && Math.abs(x - pl.x) <= pl.w / 2 + 8 && y >= pl.y - 30 && y <= pl.y + pl.h) { y = pl.y; break; }
+  y = Math.min(y, R.lavaY - 40); // never into the lava
+  burst(p.x, p.y - 15, '#c084fc', 18, 220); burst(p.x, p.y - 15, '#fff', 8, 160);
+  p.x = x; p.y = y; p.vx = 0; p.vy = 0; p.onGround = false; p.plat = null; p.coyote = 0; p.squash = 0.6;
+  burst(x, y - 15, '#c084fc', 22, 240); burst(x, y - 15, '#fde047', 10, 180);
+  R.tele = false; R.teleCD = 0.6; sfx('tele');
+}
+function armTele() {
+  const R = G.run;
+  if (R.done || R.dying > 0) return;
+  if (R.teleCD > 0 && !R.tele) { sfx('no'); return; }
+  R.tele = !R.tele; sfx('tick');
 }
 function fallInLava(msg) {
   const R = G.run;
@@ -984,7 +1027,7 @@ function render() {
   ctx.restore();
   drawAtmosphere();
   if (T3.ok) { const want = use3D() ? 'block' : 'none'; if (T3.gl.style.display !== want) T3.gl.style.display = want; }
-  if (G.phase === 'build') { captureCamView(); drawTV(); drawCamView(); drawBuildHUD(); drawPalette(); if (use3D()) drawCamButtons(); } else { drawRunHUD(); drawTouchButtons(); }
+  if (G.phase === 'build') { captureCamView(); drawTV(); drawCamView(); drawBuildHUD(); drawPalette(); if (use3D()) drawCamButtons(); } else { drawRunHUD(); drawTouchButtons(); drawPowerButtons(); }
   drawHint();
   drawBanner();
 }
@@ -1070,7 +1113,15 @@ function renderRun() {
   for (const m of C.mons) if (!(m.dead && m.deadT > 0.5)) drawMonster(m, m.x, m.y);
   // you!
   const p = R.p;
-  if (R.dying <= 0 && !(p.inv > 0 && Math.floor(G.t * 16) % 2)) drawHero(p.x, p.y, { face: p.face, walk: p.walk, squash: p.squash, hurt: p.inv > 0 });
+  if (R.dying <= 0 && !(p.inv > 0 && Math.floor(G.t * 16) % 2)) {
+    drawHero(p.x, p.y, { face: p.face, walk: p.walk, squash: p.squash, hurt: p.inv > 0 });
+    drawEmo('🔫', p.x + p.face * 20, p.y - 15, 17, p.face > 0); // the gun points the way you face
+  }
+  for (const b of R.shots) {
+    ctx.strokeStyle = 'rgba(253,224,71,.5)'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - Math.sign(b.vx) * 26, b.y); ctx.stroke();
+    circle(b.x, b.y, 5, '#fde047'); circle(b.x, b.y, 2.5, '#fff');
+  }
   drawParts(0);
   ctx.restore();
   // the lava!
@@ -1572,8 +1623,9 @@ function drawPalette() {
   }
 }
 // on-screen buttons for touch screens
-const touchBtn = { left: false, right: false, jump: false };
-function touchRects() { return { left: { x: 16, y: H - 120, w: 104, h: 104 }, right: { x: 132, y: H - 120, w: 104, h: 104 }, jump: { x: W - 140, y: H - 130, w: 124, h: 114 } }; }
+const touchBtn = { left: false, right: false, jump: false, fire: false };
+function touchRects() { return { left: { x: 16, y: H - 120, w: 104, h: 104 }, right: { x: 132, y: H - 120, w: 104, h: 104 }, jump: { x: W - 140, y: H - 130, w: 124, h: 114 }, fire: { x: W - 266, y: H - 120, w: 114, h: 104 } }; }
+const teleRect = () => ({ x: W - 392, y: H - 120, w: 114, h: 104 });
 let showTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 function drawTouchButtons() {
   if (!showTouch) return;
@@ -1583,6 +1635,24 @@ function drawTouchButtons() {
     rr(r.x, r.y, r.w, r.h, 22); ctx.fillStyle = touchBtn[id] ? 'rgba(251,146,60,.6)' : 'rgba(255,255,255,.16)'; ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.stroke();
     text(lab, r.x + r.w / 2, r.y + r.h / 2, id === 'jump' ? 24 : 40, '#fff');
+  }
+}
+// the gun and teleport buttons show on every device
+function drawPowerButtons() {
+  const R = G.run, T = touchRects(), f = T.fire, tr = teleRect();
+  rr(f.x, f.y, f.w, f.h, 22); ctx.fillStyle = touchBtn.fire || keys.f || keys.x ? 'rgba(250,204,21,.65)' : 'rgba(255,255,255,.16)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.stroke();
+  drawEmo('🔫', f.x + f.w / 2, f.y + 40, 34, true); text('FIRE', f.x + f.w / 2, f.y + f.h - 18, 17, '#fff');
+  const on = R.tele, pulse = 0.5 + 0.5 * Math.sin(G.t * 8);
+  rr(tr.x, tr.y, tr.w, tr.h, 22); ctx.fillStyle = on ? 'rgba(192,132,252,' + (0.55 + pulse * 0.3) + ')' : R.teleCD > 0 ? 'rgba(255,255,255,.07)' : 'rgba(168,85,247,.35)'; ctx.fill();
+  ctx.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.35)'; ctx.lineWidth = on ? 3 : 2; ctx.stroke();
+  drawEmo('✨', tr.x + tr.w / 2, tr.y + 40, 34); text('TELEPORT', tr.x + tr.w / 2, tr.y + tr.h - 18, 15, '#fff');
+  if (on) {
+    ctx.strokeStyle = 'rgba(192,132,252,' + (0.4 + pulse * 0.5) + ')'; ctx.lineWidth = 6; ctx.strokeRect(3, TOP + 3, W - 6, H - TOP - 6);
+    const msg = '✨ Tap where you want to go! ✨';
+    ctx.font = 'bold 22px ' + FONT; const tw = ctx.measureText(msg).width + 44;
+    rr(W / 2 - tw / 2, TOP + 56, tw, 42, 21); ctx.fillStyle = 'rgba(88,28,135,.88)'; ctx.fill();
+    text(msg, W / 2, TOP + 78, 22, '#fff');
   }
 }
 function drawBanner() {
@@ -1598,7 +1668,7 @@ function drawBanner() {
 function drawHint() {
   if (G.L > 2 || G.state !== 'play' || G.banner) return;
   let msg;
-  if (G.phase === 'run') msg = showTouch ? '◀ ▶ to move, ⬆ JUMP to jump – get to the top!' : '⬅ ➡ to move, ⬆ or Space to jump – get to the top!';
+  if (G.phase === 'run') msg = showTouch ? '◀ ▶ move, ⬆ JUMP, 🔫 FIRE zaps monsters, ✨ TELEPORT then tap!' : '⬅ ➡ move, ⬆ jump, F fires 🔫, T then click to ✨ teleport!';
   else if (!G.b.defense) {
     const st = hutStatus();
     if (!st.roof) msg = '👆 Pick a cube at the bottom, then tap above your house to make a ROOF';
@@ -1621,7 +1691,7 @@ const activeTouch = new Map();
 function toLogical(e) { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
 function inR(p, r) { return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h; }
 function updateTouchButtons() {
-  touchBtn.left = touchBtn.right = touchBtn.jump = false;
+  touchBtn.left = touchBtn.right = touchBtn.jump = touchBtn.fire = false;
   const T = touchRects();
   for (const p of activeTouch.values()) for (const id in T) if (inR(p, T[id])) touchBtn[id] = true;
 }
@@ -1639,7 +1709,12 @@ canvas.addEventListener('pointerdown', e => {
     return;
   }
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
-  if (G.phase === 'run') { activeTouch.set(e.pointerId, p); updateTouchButtons(); return; }
+  if (G.phase === 'run') {
+    if (inR(p, teleRect())) { armTele(); return; }
+    const T = touchRects(), onBtn = inR(p, T.fire) || (showTouch && (inR(p, T.left) || inR(p, T.right) || inR(p, T.jump)));
+    if (G.run.tele && !onBtn) { teleTo(p.x, p.y); return; } // ✨ go where you tapped
+    activeTouch.set(e.pointerId, p); updateTouchButtons(); return;
+  }
   if (G.phase !== 'build') return;
   const B = G.b;
   if (p.y >= SHOP_Y) {
@@ -1683,6 +1758,7 @@ window.addEventListener('keydown', e => {
   if (G && G.state === 'play') {
     if (k === 'p' || k === 'Escape') pauseGame();
     if (k === 'm') toggleMute();
+    if (k === 't' && G.phase === 'run' && !e.repeat) armTele();
     if (G.phase === 'build') {
       const i = '1234567890'.indexOf(k);
       if (k.length === 1 && i >= 0 && i < PALETTE.length && unlockedBlock(PALETTE[i])) G.b.sel = PALETTE[i];
