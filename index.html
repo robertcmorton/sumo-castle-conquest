@@ -118,9 +118,20 @@ const GROUPS = [
 // Add new games here — newest first. Each game saves under its own name, so scores and levels never mix.
 const GAMES = [
   {
+    file: 'soccer-shoot.html', emoji: '⚽', name: 'Soccer Shoot',
+    desc: 'Win soccer matches, blast zombies with TNT and buy the best players!',
+    bg: 'linear-gradient(160deg, #22c55e, #065f46)', edge: '#052e16', badge: 'NEW!',
+    progress() {
+      const lvl = parseInt(read('leo_soccer_unlocked') || '0', 10);
+      if (!lvl) return '';
+      const cash = parseInt(read('leo_soccer_money') || '0', 10);
+      return 'Level ' + lvl + (cash ? ' · 💰 $' + cash.toLocaleString('en-AU') : '');
+    },
+  },
+  {
     file: 'lava-block.html', emoji: '🌋', name: 'Lava Block',
     desc: 'The floor is lava! Climb to the top, then build a hut out of cubes!',
-    bg: 'linear-gradient(160deg, #fb923c, #b91c1c)', edge: '#450a0a', badge: 'NEW!',
+    bg: 'linear-gradient(160deg, #fb923c, #b91c1c)', edge: '#450a0a',
     progress() {
       const lvl = parseInt(read('leo_lava_unlocked') || '0', 10);
       if (!lvl) return '';
